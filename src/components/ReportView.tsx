@@ -233,7 +233,15 @@ export const ReportView = ({
       const parsedLogs: WorkDay['logs'] = [];
 
       for (let i = 1; i < lines.length; i++) {
-        const values = lines[i].split(',').map(v => v.replace(/"/g, '').trim());
+        let values = lines[i].split(',').map(v => v.replace(/"/g, '').trim());
+
+        // If the date contains a comma (e.g. "Mar 31, 2026"), the naive split will create extra columns.
+        // For shift-style and report-style CSVs, unify into expected column count.
+        if (values.length > headers.length && headers.includes('date')) {
+          const diff = values.length - headers.length;
+          const dateValue = values.slice(0, diff + 1).join(',').trim();
+          values = [dateValue, ...values.slice(diff + 1)];
+        }
         if (values.length < headers.length) continue;
         const row = headers.reduce((acc, h, idx) => ({ ...acc, [h]: values[idx] ?? '' }), {} as Record<string,string>);
 
