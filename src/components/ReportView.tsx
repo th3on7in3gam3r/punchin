@@ -222,11 +222,12 @@ export const ReportView = ({
       }
 
       const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim().toLowerCase());
-      const required = ['date', 'type'];
-      for (const col of required) {
-        if (!headers.includes(col)) {
-          throw new Error(`CSV header missing required column: ${col}`);
-        }
+      const hasTypeMode = headers.includes('date') && headers.includes('type');
+      const hasShiftMode = headers.includes('date') && headers.includes('start time') && headers.includes('end time');
+      const hasReportMode = headers.includes('date') && headers.includes('hours');
+
+      if (!hasTypeMode && !hasShiftMode && !hasReportMode) {
+        throw new Error('CSV must contain either (date+type) or (date+start time+end time) or (date+hours).');
       }
 
       const parsedLogs: WorkDay['logs'] = [];
@@ -237,27 +238,68 @@ export const ReportView = ({
         const row = headers.reduce((acc, h, idx) => ({ ...acc, [h]: values[idx] ?? '' }), {} as Record<string,string>);
 
         const dateString = row.date;
-        const type = row.type as WorkDay['logs'][number]['type'];
-        if (!['clock_in','clock_out','break_start','break_end'].includes(type)) continue;
 
-        let timestamp = 0;
-        if (row.timestamp) {
-          timestamp = Number(row.timestamp);
-        } else if (row.time) {
-          const date = new Date(`${dateString}T${row.time}`);
-          timestamp = date.getTime();
-        } else {
+        if (hasTypeMode && row.type) {
+          const type = row.type as WorkDay['logs'][number]['type'];
+          if (!['clock_in','clock_out','break_start','break_end'].includes(type)) continue;
+
+          let timestamp = 0;
+          if (row.timestamp) {
+            timestamp = Number(row.timestamp);
+          } else if (row.time) {
+            const date = new Date(`${dateString}T${row.time}`);
+            timestamp = date.getTime();
+          } else {
+            const date = new Date(`${dateString}T09:00`);
+            timestamp = date.getTime();
+          }
+          if (!Number.isFinite(timestamp) || timestamp <= 0) continue;
+
+          parsedLogs.push({
+            id: crypto.randomUUID(),
+            type,
+            timestamp,
+            locationId: row.locationid || row.location_id || row.location || undefined
+          });
+        } else if (hasShiftMode && row['start time'] && row['end time']) {
+          const startDate = new Date(`${dateString} ${row['start time']}`);
+          const endDate = new Date(`${dateString} ${row['end time']}`);
+          if (Number.isFinite(startDate.getTime()) && Number.isFinite(endDate.getTime()) && endDate.getTime() > startDate.getTime()) {
+            parsedLogs.push({
+              id: crypto.randomUUID(),
+              type: 'clock_in',
+              timestamp: startDate.getTime(),
+              locationId: row.locationid || row.location_id || row.location || undefined
+            });
+            parsedLogs.push({
+              id: crypto.randomUUID(),
+              type: 'clock_out',
+              timestamp: endDate.getTime(),
+              locationId: row.locationid || row.location_id || row.location || undefined
+            });
+          }
+          continue;
+        } else if (hasReportMode && row.hours) {
+          const hours = Number(row.hours);
+          if (!Number.isFinite(hours) || hours <= 0) continue;
+
           const date = new Date(`${dateString}T09:00`);
-          timestamp = date.getTime();
-        }
-        if (!Number.isFinite(timestamp) || timestamp <= 0) continue;
+          if (!Number.isFinite(date.getTime())) continue;
 
-        parsedLogs.push({
-          id: crypto.randomUUID(),
-          type,
-          timestamp,
-          locationId: row.locationid || row.location_id || row.location || undefined
-        });
+          const start = date.getTime();
+          const end = start + Math.round(hours * 3600 * 1000);
+
+          parsedLogs.push({
+            id: crypto.randomUUID(),
+            type: 'clock_in',
+            timestamp: start,
+          });
+          parsedLogs.push({
+            id: crypto.randomUUID(),
+            type: 'clock_out',
+            timestamp: end,
+          });
+        }
       }
 
       if (parsedLogs.length === 0) {
