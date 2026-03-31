@@ -44,6 +44,7 @@ export const SettingsView = ({
 }) => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   
   // Local Settings State
   const [localBreakDuration, setLocalBreakDuration] = useState(breakDuration);
@@ -91,7 +92,7 @@ export const SettingsView = ({
     audio.play().catch(e => console.error("Audio play failed", e));
   };
 
-  const handleGlobalSave = () => {
+  const handleGlobalSave = async () => {
     setBreakDuration(localBreakDuration);
     setWorkLocations(localWorkLocations);
     setUserProfile(localProfile);
@@ -99,6 +100,30 @@ export const SettingsView = ({
     setDefaultWorkStart(localStart);
     setDefaultWorkEnd(localEnd);
     setDefaultReminderSound(localReminderSound);
+    
+    try {
+      const response = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          breakDuration: localBreakDuration,
+          workLocations: localWorkLocations,
+          userProfile: localProfile,
+          workDaysOfWeek: localDaysOfWeek,
+          defaultWorkStart: localStart,
+          defaultWorkEnd: localEnd,
+          defaultReminderSound: localReminderSound,
+        }),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(errText || 'Failed to save settings to server');
+      }
+      setSaveError(null);
+    } catch (error: any) {
+      setSaveError(error.message || 'Failed to save settings.');
+    }
     
     setShowSaved(true);
     setTimeout(() => setShowSaved(false), 3000);
@@ -413,6 +438,9 @@ export const SettingsView = ({
       </div>
 
       <div className="sticky bottom-4 pt-4 animate-in slide-in-from-bottom-4 duration-500">
+        {saveError && (
+          <p className="text-xs text-rose-500 text-center mb-2">{saveError}</p>
+        )}
         <Button3D color="blue" onClick={handleGlobalSave} className="w-full py-6 flex items-center justify-center gap-3 shadow-2xl relative overflow-hidden group">
           <div className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 skew-x-12" />
           <motion.div
