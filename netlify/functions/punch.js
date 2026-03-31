@@ -27,7 +27,7 @@ async function ensureTables() {
   `;
 }
 
-export default async (req: Request) => {
+export default async (req) => {
   // Ensure tables exist
   await ensureTables();
 
@@ -59,7 +59,7 @@ export default async (req: Request) => {
         }
       );
 
-    } catch (error: any) {
+    } catch (error) {
       console.error("Punch function error:", error);
       return new Response(
         JSON.stringify({ error: error.message || "Database error" }),
@@ -85,7 +85,7 @@ export default async (req: Request) => {
         status: 200,
         headers: { "Content-Type": "application/json" }
       });
-    } catch (error: any) {
+    } catch (error) {
       return new Response(JSON.stringify({ error: error.message }), { status: 500 });
     }
   }
