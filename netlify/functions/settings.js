@@ -1,12 +1,7 @@
-import { neon } from '@netlify/neon';
+import { neon } from '@neondatabase/serverless';
 
-// Load .env for local dev (no-op in production)
-if (process.env.NODE_ENV !== 'production' && !process.env.NETLIFY_DATABASE_URL) {
-  const { config } = await import('dotenv');
-  config();
-}
-
-const sql = neon(process.env.NETLIFY_DATABASE_URL);
+const DB_URL = process.env.NETLIFY_DATABASE_URL || "postgresql://neondb_owner:npg_vx7qg5wXrGMS@ep-orange-pond-ajpwspnt-pooler.c-3.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require";
+const sql = neon(DB_URL);
 
 async function ensureSettingsTable() {
   await sql`
