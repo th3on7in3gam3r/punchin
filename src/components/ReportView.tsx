@@ -65,8 +65,8 @@ export const ReportView = ({
   const { startDate, endDate } = useMemo(() => {
     if (rangeType === 'weekly') {
       return { 
-        startDate: startOfWeek(referenceDate, { weekStartsOn: 1 }), 
-        endDate: endOfWeek(referenceDate, { weekStartsOn: 1 }) 
+        startDate: startOfWeek(referenceDate, { weekStartsOn: 0 }), 
+        endDate: endOfWeek(referenceDate, { weekStartsOn: 0 }) 
       };
     } else if (rangeType === 'monthly') {
       return { 
@@ -146,8 +146,8 @@ export const ReportView = ({
 
   const currentWeekStats = useMemo(() => {
     const now = new Date();
-    const start = startOfWeek(now, { weekStartsOn: 1 });
-    const end = endOfWeek(now, { weekStartsOn: 1 });
+    const start = startOfWeek(now, { weekStartsOn: 0 });
+    const end = endOfWeek(now, { weekStartsOn: 0 });
     const days = eachDayOfInterval({ start, end });
     
     let totalHours = 0;

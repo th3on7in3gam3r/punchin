@@ -81,13 +81,30 @@ export const ManualEntryModal = ({ isOpen, onClose, workLocations, setWorkDays }
 
     setWorkDays(prev => {
       const existing = prev.find(d => d.date === newEntryDate);
+      let newWorkDays: WorkDay[];
       if (existing) {
         const merged = [...existing.logs, ...logs].sort((a, b) => a.timestamp - b.timestamp);
-        return prev.map(d => d.date === newEntryDate ? recalculateDay(d, merged) : d);
+        newWorkDays = prev.map(d => d.date === newEntryDate ? recalculateDay(d, merged) : d);
       } else {
         const newDay: WorkDay = { id: crypto.randomUUID(), date: newEntryDate, logs: [], totalWorkMinutes: 0, totalBreakMinutes: 0 };
-        return [...prev, recalculateDay(newDay, logs)];
+        newWorkDays = [...prev, recalculateDay(newDay, logs)];
       }
+
+      // Sync each new log to database
+      Promise.all(logs.map(log => 
+        fetch('/api/punch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            action: log.type, 
+            locationId: log.locationId,
+            timestamp: log.timestamp, 
+            date: newEntryDate
+          })
+        })
+      )).catch(err => console.error("Manual sync failed:", err));
+
+      return newWorkDays;
     });
 
     onClose();

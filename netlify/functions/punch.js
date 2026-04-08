@@ -39,13 +39,14 @@ export default async (req) => {
       const locationId = body.locationId;
 
       const now = new Date();
-      const dateStr = now.toISOString().split('T')[0]; // yyyy-mm-dd
+      const dateStr = body.date || now.toISOString().split('T')[0]; // yyyy-mm-dd
+      const timestamp = body.timestamp || now.getTime();
       const logId = crypto.randomUUID();
 
       // Insert the new time log
       await sql`
         INSERT INTO time_logs (id, work_day_date, type, timestamp, location_id)
-        VALUES (${logId}, ${dateStr}, ${type}, ${now.getTime()}, ${locationId || null})
+        VALUES (${logId}, ${dateStr}, ${type}, ${timestamp}, ${locationId || null})
       `;
 
       // You can expand this later to also update totals in work_days table
@@ -77,10 +78,8 @@ export default async (req) => {
   // GET request - fetch today's logs (optional for now)
   if (req.method === 'GET') {
     try {
-      const dateStr = new Date().toISOString().split('T')[0];
       const logs = await sql`
         SELECT * FROM time_logs 
-        WHERE work_day_date = ${dateStr}
         ORDER BY timestamp ASC
       `;
 

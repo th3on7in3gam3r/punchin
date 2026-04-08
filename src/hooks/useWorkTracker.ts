@@ -175,57 +175,65 @@ export function useWorkTracker() {
     return () => clearInterval(timer);
   }, []);
 
-  // Load today's logs from DB on mount
+  // Load all logs from DB on mount
   useEffect(() => {
-    async function loadToday() {
+    async function loadHistory() {
       try {
         const res = await fetch('/api/punch');
         if (res.ok) {
           const { logs } = await res.json();
           if (logs && logs.length > 0) {
-            const dateStr = format(new Date(), 'yyyy-MM-dd');
             setWorkDays(prev => {
-              const others = prev.filter(d => d.date !== dateStr);
-              
-              const mappedLogs = logs.map((l: any) => ({
-                id: l.id,
-                type: l.type,
-                timestamp: Number(l.timestamp),
-                locationId: l.location_id
-              }));
-
-              let workMins = 0;
-              let breakMins = 0;
-              let lastIn: number | null = null;
-              let lastBreak: number | null = null;
-
-              mappedLogs.forEach((log: any) => {
-                if (log.type === 'clock_in') lastIn = log.timestamp;
-                if (log.type === 'break_start') {
-                  if (lastIn) workMins += (log.timestamp - lastIn) / 60000;
-                  lastBreak = log.timestamp;
-                  lastIn = null;
-                }
-                if (log.type === 'break_end') {
-                  if (lastBreak) breakMins += (log.timestamp - lastBreak) / 60000;
-                  lastIn = log.timestamp;
-                  lastBreak = null;
-                }
-                if (log.type === 'clock_out') {
-                  if (lastIn) workMins += (log.timestamp - lastIn) / 60000;
-                  lastIn = null;
-                }
+              // Group logs by date
+              const dayGroups: Record<string, any[]> = {};
+              logs.forEach((l: any) => {
+                const d = l.work_day_date;
+                if (!dayGroups[d]) dayGroups[d] = [];
+                dayGroups[d].push({
+                  id: l.id,
+                  type: l.type,
+                  timestamp: Number(l.timestamp),
+                  locationId: l.location_id
+                });
               });
 
-              const todayObj: WorkDay = {
-                id: crypto.randomUUID(),
-                date: dateStr,
-                logs: mappedLogs,
-                totalWorkMinutes: workMins,
-                totalBreakMinutes: breakMins
-              };
+              const updatedDays: WorkDay[] = Object.entries(dayGroups).map(([date, dayLogs]) => {
+                let workMins = 0;
+                let breakMins = 0;
+                let lastIn: number | null = null;
+                let lastBreak: number | null = null;
 
-              const lastLog = mappedLogs[mappedLogs.length - 1];
+                dayLogs.forEach((log: any) => {
+                  if (log.type === 'clock_in') lastIn = log.timestamp;
+                  if (log.type === 'break_start') {
+                    if (lastIn) workMins += (log.timestamp - lastIn) / 60000;
+                    lastBreak = log.timestamp;
+                    lastIn = null;
+                  }
+                  if (log.type === 'break_end') {
+                    if (lastBreak) breakMins += (log.timestamp - lastBreak) / 60000;
+                    lastIn = log.timestamp;
+                    lastBreak = null;
+                  }
+                  if (log.type === 'clock_out') {
+                    if (lastIn) workMins += (log.timestamp - lastIn) / 60000;
+                    lastIn = null;
+                  }
+                });
+
+                return {
+                  id: crypto.randomUUID(),
+                  date,
+                  logs: dayLogs,
+                  totalWorkMinutes: workMins,
+                  totalBreakMinutes: breakMins
+                };
+              });
+
+              // Also check current status based on today's last log
+              const todayStr = format(new Date(), 'yyyy-MM-dd');
+              const todayLogs = dayGroups[todayStr] || [];
+              const lastLog = todayLogs[todayLogs.length - 1];
               if (lastLog) {
                 if (lastLog.type === 'clock_in') setCurrentStatus('clocked_in');
                 if (lastLog.type === 'break_start') setCurrentStatus('on_break');
@@ -233,15 +241,16 @@ export function useWorkTracker() {
                 if (lastLog.type === 'clock_out') setCurrentStatus('clocked_out');
               }
 
-              return [...others, todayObj];
+              // Merge with existing local state (prioritizing DB)
+              return updatedDays.sort((a,b) => b.date.localeCompare(a.date));
             });
           }
         }
       } catch (error) {
-        console.error("Failed to load from DB:", error);
+        console.error("Failed to load history from DB:", error);
       }
     }
-    loadToday();
+    loadHistory();
   }, []);
 
   // Load hourlyRate from DB settings on mount
@@ -351,7 +360,7 @@ export function useWorkTracker() {
   const formatMinutes = useCallback((mins: number) => {
     const h = Math.floor(mins / 60);
     const m = Math.round(mins % 60);
-    return `${h}h ${m}m`;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
   }, []);
 
   const clearAllData = useCallback(() => {

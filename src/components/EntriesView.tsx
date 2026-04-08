@@ -23,8 +23,8 @@ export const EntriesView = ({ workDays, setWorkDays, formatMinutes, workLocation
 
   const weeklyTotalMinutes = useMemo(() => {
     const now = new Date();
-    const start = startOfWeek(now, { weekStartsOn: 1 });
-    const end = endOfWeek(now, { weekStartsOn: 1 });
+    const start = startOfWeek(now, { weekStartsOn: 0 });
+    const end = endOfWeek(now, { weekStartsOn: 0 });
 
     return workDays
       .filter(day => {
@@ -72,8 +72,8 @@ export const EntriesView = ({ workDays, setWorkDays, formatMinutes, workLocation
     
     filteredDays.forEach(day => {
       const date = parseISO(day.date);
-      const weekStart = startOfWeek(date, { weekStartsOn: 1 });
-      const weekEnd = endOfWeek(date, { weekStartsOn: 1 });
+      const weekStart = startOfWeek(date, { weekStartsOn: 0 });
+      const weekEnd = endOfWeek(date, { weekStartsOn: 0 });
       const weekRange = `Week of ${format(weekStart, 'MMMM dd')} - ${format(weekEnd, 'MMMM dd, yyyy')}`;
       
       const existingGroup = groups.find(g => g.weekRange === weekRange);
@@ -128,6 +128,12 @@ export const EntriesView = ({ workDays, setWorkDays, formatMinutes, workLocation
       timestamp: parseISO(day.date).getTime() + (9 * 60 * 60 * 1000), // Default to 9 AM
       locationId: workLocations[0]?.id
     };
+
+    fetch('/api/punch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: type, locationId: newLog.locationId, timestamp: newLog.timestamp, date: day.date })
+    }).catch(err => console.error("Sync failed:", err));
 
     setWorkDays(prev => prev.map(d => {
       if (d.id !== dayId) return d;
