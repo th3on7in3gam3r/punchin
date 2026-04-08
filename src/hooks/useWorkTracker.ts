@@ -52,7 +52,12 @@ export function useWorkTracker() {
 
   const [userProfile, setUserProfile] = useState<UserProfile>(() => {
     const saved = localStorage.getItem('punchin_profile');
-    return saved ? JSON.parse(saved) : { name: '', employeeId: '' };
+    return saved ? JSON.parse(saved) : { name: '', employeeId: '', hourlyRate: 0 };
+  });
+
+  const [hourlyRate, setHourlyRate] = useState<number>(() => {
+    const saved = localStorage.getItem('punchin_hourly_rate');
+    return saved ? parseFloat(saved) : 0;
   });
 
   const [workDaysOfWeek, setWorkDaysOfWeek] = useState<number[]>(() => {
@@ -100,6 +105,10 @@ export function useWorkTracker() {
   useEffect(() => {
     localStorage.setItem('punchin_profile', JSON.stringify(userProfile));
   }, [userProfile]);
+
+  useEffect(() => {
+    localStorage.setItem('punchin_hourly_rate', hourlyRate.toString());
+  }, [hourlyRate]);
 
   useEffect(() => {
     localStorage.setItem('punchin_work_days_of_week', JSON.stringify(workDaysOfWeek));
@@ -235,6 +244,24 @@ export function useWorkTracker() {
     loadToday();
   }, []);
 
+  // Load hourlyRate from DB settings on mount
+  useEffect(() => {
+    async function loadSettings() {
+      try {
+        const res = await fetch('/api/settings');
+        if (res.ok) {
+          const { config } = await res.json();
+          if (config?.hourlyRate !== undefined) {
+            setHourlyRate(config.hourlyRate);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load settings from DB:", error);
+      }
+    }
+    loadSettings();
+  }, []);
+
   const handleAction = useCallback(async (type: TimeLog['type'], locationId?: string) => {
     const now = new Date();
     const dateStr = format(now, 'yyyy-MM-dd');
@@ -352,6 +379,8 @@ export function useWorkTracker() {
     setWorkLocations,
     userProfile,
     setUserProfile,
+    hourlyRate,
+    setHourlyRate,
     workDaysOfWeek,
     setWorkDaysOfWeek,
     defaultWorkStart,

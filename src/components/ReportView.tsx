@@ -40,7 +40,8 @@ export const ReportView = ({
   defaultWorkEnd,
   breakDuration,
   workLocations,
-  userProfile
+  userProfile,
+  hourlyRate
 }: { 
   workDays: WorkDay[];
   setWorkDays: React.Dispatch<React.SetStateAction<WorkDay[]>>;
@@ -49,6 +50,7 @@ export const ReportView = ({
   breakDuration: number;
   workLocations: WorkLocation[];
   userProfile: { hourlyRate?: number; taxRate?: number };
+  hourlyRate: number;
 }) => {
   const [rangeType, setRangeType] = useState<'weekly' | 'monthly' | 'custom'>('weekly');
   const [referenceDate, setReferenceDate] = useState(new Date());
@@ -135,10 +137,10 @@ export const ReportView = ({
       avgHours,
       peakDay,
       workingDays,
-      grossEarnings: userProfile?.hourlyRate ? totalHours * userProfile.hourlyRate : 0,
-      netEarnings: userProfile?.hourlyRate ? totalHours * userProfile.hourlyRate * (1 - ((userProfile?.taxRate || 0) / 100)) : 0
+      grossEarnings: hourlyRate > 0 ? totalHours * hourlyRate : 0,
+      netEarnings: hourlyRate > 0 ? totalHours * hourlyRate * 0.75 : 0
     };
-  }, [reportData, userProfile?.hourlyRate, userProfile?.taxRate]);
+  }, [reportData, hourlyRate]);
 
   const currentWeekStats = useMemo(() => {
     const now = new Date();

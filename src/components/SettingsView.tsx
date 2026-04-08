@@ -16,6 +16,8 @@ export const SettingsView = ({
   setWorkLocations,
   userProfile,
   setUserProfile,
+  hourlyRate,
+  setHourlyRate,
   workDaysOfWeek,
   setWorkDaysOfWeek,
   defaultWorkStart,
@@ -33,6 +35,8 @@ export const SettingsView = ({
   setWorkLocations: (locations: WorkLocation[]) => void;
   userProfile: UserProfile;
   setUserProfile: (profile: UserProfile) => void;
+  hourlyRate: number;
+  setHourlyRate: (rate: number) => void;
   workDaysOfWeek: number[];
   setWorkDaysOfWeek: (days: number[]) => void;
   defaultWorkStart: string;
@@ -54,6 +58,7 @@ export const SettingsView = ({
   const [localStart, setLocalStart] = useState(defaultWorkStart);
   const [localEnd, setLocalEnd] = useState(defaultWorkEnd);
   const [localReminderSound, setLocalReminderSound] = useState(defaultReminderSound);
+  const [localHourlyRate, setLocalHourlyRate] = useState(hourlyRate);
 
   // UI State
   const [newLocationName, setNewLocationName] = useState('');
@@ -100,6 +105,7 @@ export const SettingsView = ({
     setDefaultWorkStart(localStart);
     setDefaultWorkEnd(localEnd);
     setDefaultReminderSound(localReminderSound);
+    setHourlyRate(localHourlyRate);
     
     try {
       const response = await fetch('/api/settings', {
@@ -113,6 +119,7 @@ export const SettingsView = ({
           defaultWorkStart: localStart,
           defaultWorkEnd: localEnd,
           defaultReminderSound: localReminderSound,
+          hourlyRate: localHourlyRate,
         }),
       });
 
@@ -225,6 +232,31 @@ export const SettingsView = ({
                   {dur}m
                 </button>
               ))}
+            </div>
+          </div>
+        </Card>
+
+        {/* Hourly Billing Rate */}
+        <Card className="p-6 space-y-4">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-emerald-100 rounded-lg text-emerald-600">
+              <DollarSign size={20} />
+            </div>
+            <p className="font-bold text-slate-700">Hourly Billing Rate</p>
+          </div>
+          <div className="space-y-3">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Your hourly rate (USD)</p>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-black text-sm">$</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                value={localHourlyRate || ''}
+                onChange={(e) => setLocalHourlyRate(parseFloat(e.target.value) || 0)}
+                className="w-full pl-8 pr-4 py-3 rounded-2xl border-2 border-slate-100 text-sm font-black text-slate-700 focus:outline-none focus:border-blue-500 bg-white transition-colors"
+              />
             </div>
           </div>
         </Card>

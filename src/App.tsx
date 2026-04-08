@@ -47,6 +47,8 @@ export default function App() {
     setWorkLocations,
     userProfile,
     setUserProfile,
+    hourlyRate,
+    setHourlyRate,
     workDaysOfWeek,
     setWorkDaysOfWeek,
     defaultWorkStart,
@@ -294,6 +296,7 @@ export default function App() {
                 breakDuration={breakDuration}
                 workLocations={workLocations}
                 userProfile={userProfile}
+                hourlyRate={hourlyRate}
               />
             )}
             {view === 'settings' && (
@@ -306,6 +309,8 @@ export default function App() {
                 setWorkLocations={setWorkLocations}
                 userProfile={userProfile}
                 setUserProfile={setUserProfile}
+                hourlyRate={hourlyRate}
+                setHourlyRate={setHourlyRate}
                 workDaysOfWeek={workDaysOfWeek}
                 setWorkDaysOfWeek={setWorkDaysOfWeek}
                 defaultWorkStart={defaultWorkStart}

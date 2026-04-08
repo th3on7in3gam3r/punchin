@@ -322,9 +322,18 @@ export const HomeView = ({
                   <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Break Protocol Active</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-3xl font-black tracking-tighter">
-                    {remainingMins > 0 ? `${Math.floor(remainingMins)}m remaining` : "Break completed"}
-                  </p>
+                  {(() => {
+                    const totalMs = Math.max(0, breakDuration * 60000 - (currentTime.getTime() - breakStart));
+                    const mins = Math.floor(totalMs / 60000);
+                    const secs = Math.floor((totalMs % 60000) / 1000);
+                    return (
+                      <p className="text-3xl font-black tracking-tighter tabular-nums">
+                        {totalMs > 0
+                          ? <>{mins.toString().padStart(2,'0')}<span className="animate-pulse">:</span>{secs.toString().padStart(2,'0')} <span className="text-base opacity-60">remaining</span></>
+                          : "Break completed"}
+                      </p>
+                    );
+                  })()}
                   <p className="text-xs font-bold opacity-40 uppercase tracking-wider">
                     Target: {breakDuration} mins
                   </p>

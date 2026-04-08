@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { WorkDay, WorkLocation, TimeLog } from '../types';
 import { Card } from './common/Card';
 import { Button3D } from './common/Button3D';
+import { cn } from '../lib/utils';
 
 interface ManualEntryModalProps {
   isOpen: boolean;
@@ -16,7 +17,11 @@ interface ManualEntryModalProps {
 export const ManualEntryModal = ({ isOpen, onClose, workLocations, setWorkDays }: ManualEntryModalProps) => {
   const [newEntryDate, setNewEntryDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [newEntryLocation, setNewEntryLocation] = useState<string>('');
-  const [newEntryTime, setNewEntryTime] = useState('09:00');
+  const [clockInTime, setClockInTime] = useState('09:00');
+  const [clockOutTime, setClockOutTime] = useState('17:00');
+  const [breakStart, setBreakStart] = useState('12:00');
+  const [breakEnd, setBreakEnd] = useState('12:30');
+  const [includeBreak, setIncludeBreak] = useState(false);
 
   const recalculateDay = (day: WorkDay, updatedLogs: TimeLog[]): WorkDay => {
     let workMins = 0;
@@ -51,37 +56,43 @@ export const ManualEntryModal = ({ isOpen, onClose, workLocations, setWorkDays }
   };
 
   const handleManualAdd = () => {
-    if (!newEntryDate || !newEntryLocation || !newEntryTime) return;
+    if (!newEntryDate || !newEntryLocation || !clockInTime || !clockOutTime) return;
 
-    const [h, m] = newEntryTime.split(':').map(Number);
-    const date = parseISO(newEntryDate);
-    date.setHours(h, m);
-
-    const newLog: TimeLog = {
-      id: crypto.randomUUID(),
-      type: 'clock_in',
-      timestamp: date.getTime(),
-      locationId: newEntryLocation
+    const makeTimestamp = (timeStr: string) => {
+      const [h, m] = timeStr.split(':').map(Number);
+      const d = parseISO(newEntryDate);
+      d.setHours(h, m, 0, 0);
+      return d.getTime();
     };
+
+    const logs: TimeLog[] = [
+      { id: crypto.randomUUID(), type: 'clock_in', timestamp: makeTimestamp(clockInTime), locationId: newEntryLocation },
+    ];
+
+    if (includeBreak) {
+      logs.push({ id: crypto.randomUUID(), type: 'break_start', timestamp: makeTimestamp(breakStart), locationId: newEntryLocation });
+      logs.push({ id: crypto.randomUUID(), type: 'break_end', timestamp: makeTimestamp(breakEnd), locationId: newEntryLocation });
+    }
+
+    logs.push({ id: crypto.randomUUID(), type: 'clock_out', timestamp: makeTimestamp(clockOutTime), locationId: newEntryLocation });
+
+    // Sort by timestamp
+    logs.sort((a, b) => a.timestamp - b.timestamp);
 
     setWorkDays(prev => {
       const existing = prev.find(d => d.date === newEntryDate);
       if (existing) {
-        return prev.map(d => d.date === newEntryDate ? recalculateDay(d, [...d.logs, newLog]) : d);
+        const merged = [...existing.logs, ...logs].sort((a, b) => a.timestamp - b.timestamp);
+        return prev.map(d => d.date === newEntryDate ? recalculateDay(d, merged) : d);
       } else {
-        const newDay: WorkDay = {
-          id: crypto.randomUUID(),
-          date: newEntryDate,
-          logs: [newLog],
-          totalWorkMinutes: 0,
-          totalBreakMinutes: 0
-        };
-        return [...prev, recalculateDay(newDay, [newLog])];
+        const newDay: WorkDay = { id: crypto.randomUUID(), date: newEntryDate, logs: [], totalWorkMinutes: 0, totalBreakMinutes: 0 };
+        return [...prev, recalculateDay(newDay, logs)];
       }
     });
 
     onClose();
     setNewEntryLocation('');
+    setIncludeBreak(false);
   };
 
   return (
@@ -114,15 +125,60 @@ export const ManualEntryModal = ({ isOpen, onClose, workLocations, setWorkDays }
                   />
                 </div>
 
-                <div className="space-y-1.5">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Initial Clock In Time</p>
-                  <input 
-                    type="time" 
-                    value={newEntryTime}
-                    onChange={(e) => setNewEntryTime(e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-blue-500/20 outline-none"
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Clock In</p>
+                    <input 
+                      type="time" 
+                      value={clockInTime}
+                      onChange={(e) => setClockInTime(e.target.value)}
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-blue-500/20 outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Clock Out</p>
+                    <input 
+                      type="time" 
+                      value={clockOutTime}
+                      onChange={(e) => setClockOutTime(e.target.value)}
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-blue-500/20 outline-none"
+                    />
+                  </div>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIncludeBreak(b => !b)}
+                  className={cn(
+                    "w-full py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all",
+                    includeBreak ? "bg-orange-50 border-orange-200 text-orange-600" : "bg-white border-slate-100 text-slate-400 hover:border-orange-200"
+                  )}
+                >
+                  {includeBreak ? '− Remove Break' : '+ Add Break'}
+                </button>
+
+                {includeBreak && (
+                  <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-2">
+                    <div className="space-y-1.5">
+                      <p className="text-[10px] font-black text-orange-400 uppercase tracking-widest px-1">Break Start</p>
+                      <input 
+                        type="time" 
+                        value={breakStart}
+                        onChange={(e) => setBreakStart(e.target.value)}
+                        className="w-full px-4 py-3 bg-orange-50 border border-orange-100 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-orange-500/20 outline-none"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <p className="text-[10px] font-black text-orange-400 uppercase tracking-widest px-1">Break End</p>
+                      <input 
+                        type="time" 
+                        value={breakEnd}
+                        onChange={(e) => setBreakEnd(e.target.value)}
+                        className="w-full px-4 py-3 bg-orange-50 border border-orange-100 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-orange-500/20 outline-none"
+                      />
+                    </div>
+                  </div>
+                )}
 
                 <div className="space-y-1.5">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Work Site</p>
@@ -146,7 +202,7 @@ export const ManualEntryModal = ({ isOpen, onClose, workLocations, setWorkDays }
               <div className="flex flex-col gap-3 pt-4">
                 <Button3D 
                   color="blue" 
-                  disabled={!newEntryLocation}
+                  disabled={!newEntryLocation || !clockInTime || !clockOutTime}
                   onClick={handleManualAdd}
                 >
                   CREATE ENTRY

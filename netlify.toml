@@ -1,8 +1,10 @@
 [dev]
   command = "npm run dev"
-  targetPort = 3000     # ← This is the important line (your Vite port)
-  port = 8888           # Netlify's proxy port (default)
+  targetPort = 3000
+  port = 8888
 
-# Optional: make functions easier to find
 [functions]
   directory = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "20"

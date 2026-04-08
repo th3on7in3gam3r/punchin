@@ -1,7 +1,13 @@
 // netlify/functions/punch.ts
 import { neon } from '@netlify/neon';
 
-const sql = neon();   // Automatically uses NETLIFY_DATABASE_URL from Netlify DB
+// Load .env for local dev (no-op in production)
+if (process.env.NODE_ENV !== 'production' && !process.env.NETLIFY_DATABASE_URL) {
+  const { config } = await import('dotenv');
+  config();
+}
+
+const sql = neon(process.env.NETLIFY_DATABASE_URL);
 
 // Create tables if they don't exist (safe to run every time)
 async function ensureTables() {
