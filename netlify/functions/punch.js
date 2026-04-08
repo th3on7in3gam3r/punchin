@@ -34,7 +34,9 @@ export default async (req) => {
 
   if (req.method === 'POST') {
     try {
-      const { type, locationId } = await req.json();   // type = 'clock_in' | 'clock_out' | etc.
+      const body = await req.json();
+      const type = body.type || body.action; // Support both names
+      const locationId = body.locationId;
 
       const now = new Date();
       const dateStr = now.toISOString().split('T')[0]; // yyyy-mm-dd
