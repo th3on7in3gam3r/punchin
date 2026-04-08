@@ -49,7 +49,7 @@ export const ReportView = ({
   defaultWorkEnd: string;
   breakDuration: number;
   workLocations: WorkLocation[];
-  userProfile: { hourlyRate?: number; taxRate?: number };
+  userProfile: { taxRate?: number };
   hourlyRate: number;
 }) => {
   const [rangeType, setRangeType] = useState<'weekly' | 'monthly' | 'custom'>('weekly');
@@ -138,7 +138,9 @@ export const ReportView = ({
       peakDay,
       workingDays,
       grossEarnings: hourlyRate > 0 ? totalHours * hourlyRate : 0,
-      netEarnings: hourlyRate > 0 ? totalHours * hourlyRate * 0.75 : 0
+      netEarnings: hourlyRate > 0 
+        ? totalHours * hourlyRate * (1 - ((userProfile.taxRate || 25) / 100)) 
+        : 0
     };
   }, [reportData, hourlyRate]);
 
@@ -398,7 +400,7 @@ export const ReportView = ({
         </div>
       </div>
 
-    {userProfile?.hourlyRate && (
+    {hourlyRate > 0 && (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
         <Card className="p-6 border-none bg-emerald-50 relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-8 text-emerald-100 group-hover:scale-110 transition-transform">

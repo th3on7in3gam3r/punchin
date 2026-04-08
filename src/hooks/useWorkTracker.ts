@@ -52,7 +52,7 @@ export function useWorkTracker() {
 
   const [userProfile, setUserProfile] = useState<UserProfile>(() => {
     const saved = localStorage.getItem('punchin_profile');
-    return saved ? JSON.parse(saved) : { name: '', employeeId: '', hourlyRate: 0 };
+    return saved ? JSON.parse(saved) : { name: '', employeeId: '' };
   });
 
   const [hourlyRate, setHourlyRate] = useState<number>(() => {

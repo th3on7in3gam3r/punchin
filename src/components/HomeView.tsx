@@ -38,6 +38,7 @@ interface HomeViewProps {
   setSelectedLocationId: (id: string | undefined) => void;
   dailyStatuses: DailyStatus[];
   userProfile: UserProfile;
+  hourlyRate: number;
 }
 
 export const HomeView = ({ 
@@ -52,7 +53,8 @@ export const HomeView = ({
   selectedLocationId,
   setSelectedLocationId,
   dailyStatuses,
-  userProfile
+  userProfile,
+  hourlyRate
 }: HomeViewProps) => {
   const [confirmAction, setConfirmAction] = useState<TimeLog['type'] | null>(null);
   const [isEmergency, setIsEmergency] = useState(false);
@@ -466,7 +468,7 @@ export const HomeView = ({
 
       {/* Quick Stats Grid */}
       <div className="grid grid-cols-2 gap-4">
-        {userProfile.hourlyRate ? (
+        {hourlyRate ? (
           <Card className="p-5 flex flex-col gap-3 bg-emerald-600 border-none text-white overflow-hidden group">
             <div className="p-2 bg-white/20 rounded-xl w-fit">
                <DollarSign size={18} />
@@ -474,11 +476,11 @@ export const HomeView = ({
             <div>
                <p className="text-[8px] font-black uppercase tracking-widest opacity-60 mb-1">Today's Earnings</p>
                <p className="text-xl font-black tracking-tight">
-                 ${((today.totalWorkMinutes / 60) * userProfile.hourlyRate).toFixed(2)}
+                 ${((today.totalWorkMinutes / 60) * hourlyRate).toFixed(2)}
                </p>
                {userProfile.taxRate && (
                  <p className="text-[7px] font-black opacity-40 uppercase tracking-widest mt-1">
-                   Est. Net: ${((today.totalWorkMinutes / 60) * userProfile.hourlyRate * (1 - (userProfile.taxRate / 100))).toFixed(2)}
+                   Est. Net: ${((today.totalWorkMinutes / 60) * hourlyRate * (1 - (userProfile.taxRate / 100))).toFixed(2)}
                  </p>
                )}
             </div>

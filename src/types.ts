@@ -38,7 +38,6 @@ export interface Reminder {
 export interface UserProfile {
   name: string;
   employeeId: string;
-  hourlyRate?: number;
   taxRate?: number;
 }
 

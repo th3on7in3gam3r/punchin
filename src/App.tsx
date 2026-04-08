@@ -267,6 +267,7 @@ export default function App() {
                 setSelectedLocationId={setSelectedLocationId}
                 dailyStatuses={dailyStatuses}
                 userProfile={userProfile}
+                hourlyRate={hourlyRate}
               />
             )}
             {view === 'entries' && (

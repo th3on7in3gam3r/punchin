@@ -349,20 +349,6 @@ export const SettingsView = ({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Hourly Rate ($)</label>
-                  <div className="relative">
-                    <DollarSign size={14} className="absolute left-4 top-3.5 text-slate-400" />
-                    <input 
-                      type="number" 
-                      placeholder="0.00"
-                      value={localProfile.hourlyRate || ''}
-                      onChange={(e) => setLocalProfile({...localProfile, hourlyRate: parseFloat(e.target.value)})}
-                      className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                    />
-                  </div>
-                </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Tax Rate (%)</label>
                    <div className="relative">
@@ -377,9 +363,8 @@ export const SettingsView = ({
                   </div>
                 </div>
               </div>
-            </div>
-          )}
-        </Card>
+            )}
+          </Card>
 
         <Card className="p-6 space-y-4">
           <div 
