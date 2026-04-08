@@ -323,15 +323,30 @@ export const HomeView = ({
                 </div>
                 <div className="space-y-1">
                   {(() => {
-                    const totalMs = Math.max(0, breakDuration * 60000 - (currentTime.getTime() - breakStart));
+                    const elapsedMs = currentTime.getTime() - breakStart;
+                    const totalMs = Math.max(0, (breakDuration * 60000) - elapsedMs);
                     const mins = Math.floor(totalMs / 60000);
                     const secs = Math.floor((totalMs % 60000) / 1000);
+                    
+                    if (totalMs <= 0) {
+                      return (
+                        <p className="text-3xl font-black tracking-tighter text-emerald-400">
+                          Break completed
+                        </p>
+                      );
+                    }
+
                     return (
-                      <p className="text-3xl font-black tracking-tighter tabular-nums">
-                        {totalMs > 0
-                          ? <>{mins.toString().padStart(2,'0')}<span className="animate-pulse">:</span>{secs.toString().padStart(2,'0')} <span className="text-base opacity-60">remaining</span></>
-                          : "Break completed"}
-                      </p>
+                      <div className="flex items-baseline gap-2">
+                        <p className="text-5xl font-black tracking-tighter tabular-nums">
+                          {mins.toString().padStart(2, '0')}
+                          <span className="text-blue-500 opacity-80 mx-1">:</span>
+                          {secs.toString().padStart(2, '0')}
+                        </p>
+                        <p className="text-sm font-black text-slate-500 uppercase tracking-widest">
+                          Secs left
+                        </p>
+                      </div>
                     );
                   })()}
                   <p className="text-xs font-bold opacity-40 uppercase tracking-wider">
