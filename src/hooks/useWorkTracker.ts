@@ -253,16 +253,22 @@ export function useWorkTracker() {
     loadHistory();
   }, []);
 
-  // Load hourlyRate from DB settings on mount
+  // Load all settings from DB on mount
   useEffect(() => {
     async function loadSettings() {
       try {
         const res = await fetch('/api/settings');
         if (res.ok) {
           const { config } = await res.json();
-          if (config?.hourlyRate !== undefined) {
-            setHourlyRate(config.hourlyRate);
-          }
+          if (!config) return;
+          if (config.hourlyRate !== undefined) setHourlyRate(config.hourlyRate);
+          if (config.workLocations?.length) setWorkLocations(config.workLocations);
+          if (config.userProfile) setUserProfile(config.userProfile);
+          if (config.workDaysOfWeek?.length) setWorkDaysOfWeek(config.workDaysOfWeek);
+          if (config.defaultWorkStart) setDefaultWorkStart(config.defaultWorkStart);
+          if (config.defaultWorkEnd) setDefaultWorkEnd(config.defaultWorkEnd);
+          if (config.breakDuration) setBreakDuration(config.breakDuration);
+          if (config.defaultReminderSound) setDefaultReminderSound(config.defaultReminderSound);
         }
       } catch (error) {
         console.error("Failed to load settings from DB:", error);
