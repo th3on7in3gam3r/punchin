@@ -55,6 +55,22 @@ export const ManualEntryModal = ({ isOpen, onClose, workLocations, setWorkDays }
     };
   };
 
+  const calcPreview = () => {
+    if (!clockInTime || !clockOutTime) return null;
+    const toMins = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+    const totalMins = toMins(clockOutTime) - toMins(clockInTime);
+    if (totalMins <= 0) return null;
+    let breakMins = 0;
+    if (includeBreak && breakStart && breakEnd) {
+      breakMins = Math.max(0, toMins(breakEnd) - toMins(breakStart));
+    }
+    const workMins = totalMins - breakMins;
+    const fmt = (m: number) => `${Math.floor(m / 60)}h ${m % 60}m`;
+    return { total: fmt(totalMins), break: fmt(breakMins), work: fmt(workMins), workMins };
+  };
+
+  const preview = calcPreview();
+
   const handleManualAdd = () => {
     if (!newEntryDate || !newEntryLocation || !clockInTime || !clockOutTime) return;
 
@@ -217,6 +233,25 @@ export const ManualEntryModal = ({ isOpen, onClose, workLocations, setWorkDays }
               </div>
 
               <div className="flex flex-col gap-3 pt-4">
+                {preview && (
+                  <div className="rounded-2xl bg-slate-50 border border-slate-100 px-4 py-3 space-y-1.5">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Hours Summary</p>
+                    <div className="flex justify-between text-xs font-bold text-slate-500">
+                      <span>Total shift</span>
+                      <span>{preview.total}</span>
+                    </div>
+                    {includeBreak && (
+                      <div className="flex justify-between text-xs font-bold text-orange-400">
+                        <span>Break</span>
+                        <span>− {preview.break}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-sm font-black text-blue-600 border-t border-slate-200 pt-1.5 mt-1">
+                      <span>Net work time</span>
+                      <span>{preview.work}</span>
+                    </div>
+                  </div>
+                )}
                 <Button3D 
                   color="blue" 
                   disabled={!newEntryLocation || !clockInTime || !clockOutTime}
