@@ -18,3 +18,13 @@ View your app in AI Studio: https://ai.studio/apps/04adf311-1ac3-48c3-9c69-f1a58
 2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
 3. Run the app:
    `npm run dev`
+
+## Deploy
+
+### Render
+- **Frontend (Static Site)**: Build command `npm run build`, Publish directory `dist`
+- **Backend (Web Service)**: Start command `npm start`, Environment variable `DATABASE_URL`
+
+### Vercel
+- Deploy as Node.js application with start command `npm start`
+- Set environment variables: `DATABASE_URL`, `GEMINI_API_KEY`

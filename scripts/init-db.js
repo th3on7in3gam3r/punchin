@@ -1,7 +1,7 @@
 import { neon } from '@neondatabase/serverless';
 import 'dotenv/config';
 
-const sql = neon(process.env.NETLIFY_DATABASE_URL);
+const sql = neon(process.env.DATABASE_URL || process.env.NETLIFY_DATABASE_URL);
 
 async function init() {
   console.log("Initializing database schema...");
