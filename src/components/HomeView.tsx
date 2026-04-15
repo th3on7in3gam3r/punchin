@@ -58,6 +58,7 @@ export const HomeView = ({
 }: HomeViewProps) => {
   const [confirmAction, setConfirmAction] = useState<TimeLog['type'] | null>(null);
   const [isEmergency, setIsEmergency] = useState(false);
+  const [pendingLocationId, setPendingLocationId] = useState<string | undefined>(undefined);
 
   const dateStr = format(currentTime, 'yyyy-MM-dd');
   const dailyStatus = dailyStatuses.find(s => s.date === dateStr);
@@ -205,9 +206,14 @@ export const HomeView = ({
 
   const handleConfirmAction = () => {
     if (confirmAction) {
-      handleAction(confirmAction, selectedLocationId || undefined);
+      const locId = confirmAction === 'clock_in' ? pendingLocationId : selectedLocationId;
+      handleAction(confirmAction, locId);
+      if (confirmAction === 'clock_in' && pendingLocationId) {
+        setSelectedLocationId(pendingLocationId);
+      }
       setConfirmAction(null);
       setIsEmergency(false);
+      setPendingLocationId(undefined);
     }
   };
 
@@ -538,16 +544,47 @@ export const HomeView = ({
                   </p>
                 </div>
               </div>
+
+              {confirmAction === 'clock_in' && workLocations.length > 0 && (
+                <div className="space-y-3">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Select Work Site</p>
+                  {workLocations.map(loc => (
+                    <button
+                      key={loc.id}
+                      onClick={() => setPendingLocationId(loc.id)}
+                      className={cn(
+                        "w-full p-4 rounded-2xl text-left transition-all border-2 flex items-center gap-3",
+                        pendingLocationId === loc.id
+                          ? "bg-blue-50 border-blue-400 shadow-sm"
+                          : "bg-slate-50 border-slate-100 hover:border-blue-200"
+                      )}
+                    >
+                      <div className={cn(
+                        "p-2 rounded-lg shadow-sm",
+                        pendingLocationId === loc.id ? "bg-blue-500 text-white" : "bg-white text-slate-400"
+                      )}>
+                        <MapPin size={16} />
+                      </div>
+                      <div>
+                        <p className={cn("font-bold text-sm", pendingLocationId === loc.id ? "text-blue-700" : "text-slate-700")}>{loc.name}</p>
+                        {loc.address && <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">{loc.address}</p>}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
               <div className="flex flex-col gap-3">
                 <Button3D 
                   color={confirmAction === 'clock_in' ? 'green' : 'red'} 
                   onClick={handleConfirmAction}
+                  disabled={confirmAction === 'clock_in' && workLocations.length > 0 && !pendingLocationId}
                   className="py-6"
                 >
                   {confirmAction === 'clock_in' ? 'YES, LET\'S GO' : 'YES, FINISH DAY'}
                 </Button3D>
                 <button 
-                  onClick={() => setConfirmAction(null)}
+                  onClick={() => { setConfirmAction(null); setPendingLocationId(undefined); }}
                   className="py-3 text-slate-400 font-bold hover:text-slate-600 transition-colors uppercase tracking-[0.3em] text-[10px]"
                 >
                   Wait, Nevermind
