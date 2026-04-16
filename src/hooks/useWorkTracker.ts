@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { format, isSameDay } from 'date-fns';
 import { WorkDay, EntryStatus, TimeLog, Reminder, WorkLocation, UserProfile, DailyStatus } from '../types';
 
@@ -36,6 +36,9 @@ export function useWorkTracker() {
   const [dailyStatuses, setDailyStatuses] = useState<DailyStatus[]>([]);
 
   const [defaultReminderSound, setDefaultReminderSound] = useState<string>(SOUNDS[0].url);
+
+  // Guard: don't save settings until they've been loaded from DB first
+  const settingsLoaded = useRef(false);
 
   // Timer & Reminder Logic
   useEffect(() => {
@@ -203,6 +206,8 @@ export function useWorkTracker() {
         if (config.reminders?.length) setReminders(config.reminders);
       } catch (error) {
         console.error("Failed to load settings from DB:", error);
+      } finally {
+        settingsLoaded.current = true;
       }
     }
     loadSettings();
@@ -210,6 +215,7 @@ export function useWorkTracker() {
 
   // Save settings to DB when they change
   const saveSettings = useCallback(async () => {
+    if (!settingsLoaded.current) return; // Don't overwrite DB before loading
     const config = {
       hourlyRate,
       workLocations,
