@@ -213,34 +213,8 @@ export function useWorkTracker() {
     loadSettings();
   }, []);
 
-  // Save settings to DB when they change
-  const saveSettings = useCallback(async () => {
-    if (!settingsLoaded.current) return; // Don't overwrite DB before loading
-    const config = {
-      hourlyRate,
-      workLocations,
-      userProfile,
-      workDaysOfWeek,
-      defaultWorkStart,
-      defaultWorkEnd,
-      breakDuration,
-      defaultReminderSound,
-      reminders
-    };
-    try {
-      await fetch('/api/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(config)
-      });
-    } catch (error) {
-      console.error("Failed to save settings:", error);
-    }
-  }, [hourlyRate, workLocations, userProfile, workDaysOfWeek, defaultWorkStart, defaultWorkEnd, breakDuration, defaultReminderSound, reminders]);
-
-  useEffect(() => {
-    saveSettings();
-  }, [saveSettings]);
+  // Settings are saved explicitly via SettingsView's handleGlobalSave.
+  // Auto-save removed to prevent race condition overwriting DB on load.
 
   const handleAction = useCallback(async (type: TimeLog['type'], locationId?: string) => {
     const now = new Date();
