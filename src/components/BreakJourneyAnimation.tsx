@@ -1,214 +1,164 @@
-import React from 'react';
-import { motion, useAnimationFrame } from 'motion/react';
+import { motion } from 'motion/react';
+import { useEffect, useState } from 'react';
+import { CharacterType, DestinationType } from '../types';
 
 export interface BreakJourneyAnimationProps {
-  progress: number;  // 0 = just started, 1 = break almost over (near bench)
+  progress: number;   // 0 = break just started, 1 = break almost over
   isActive: boolean;
+  character?: CharacterType;
+  destination?: DestinationType;
 }
 
-// ── tiny helpers ──────────────────────────────────────────────────────────────
-const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+const characterEmojis: Record<CharacterType, string> = {
+  default:  '🧍‍♂️',
+  business: '👨‍💼',
+  athlete:  '🏃‍♂️',
+  casual:   '😎',
+};
 
-export const BreakJourneyAnimation: React.FC<BreakJourneyAnimationProps> = ({
+const destinationEmojis: Record<DestinationType, string> = {
+  bench:  '🪑',
+  coffee: '☕',
+  home:   '🏠',
+  beach:  '🏖️',
+};
+
+// Background scene per destination
+const sceneColors: Record<DestinationType, { sky: string; ground: string }> = {
+  bench:  { sky: 'from-sky-50 via-blue-50 to-indigo-50',   ground: 'from-emerald-100 to-transparent' },
+  coffee: { sky: 'from-amber-50 via-orange-50 to-yellow-50', ground: 'from-amber-100 to-transparent' },
+  home:   { sky: 'from-violet-50 via-purple-50 to-pink-50',  ground: 'from-green-100 to-transparent' },
+  beach:  { sky: 'from-cyan-50 via-sky-50 to-blue-100',      ground: 'from-yellow-100 to-transparent' },
+};
+
+export default function BreakJourneyAnimation({
   progress,
   isActive,
-}) => {
-  // progress 0→1 maps person from x=8% to x=72% (bench is at ~80%)
-  const personX = lerp(8, 72, Math.min(1, progress));
+  character = 'default',
+  destination = 'bench',
+}: BreakJourneyAnimationProps) {
+  const [isJogging, setIsJogging] = useState(false);
 
-  // last 25% → jogging (faster cycle, slight bounce)
-  const isJogging = progress > 0.75;
+  useEffect(() => {
+    setIsJogging(progress > 0.65);
+  }, [progress]);
 
-  // walk/jog cycle speed
-  const cycleDuration = isJogging ? 0.38 : 0.55;
-
-  // ── SVG dimensions (viewBox 400×160) ─────────────────────────────────────
-  const W = 400;
-  const H = 160;
-  const groundY = 128;
-
-  // person geometry (all relative, will be translated)
-  const headR   = 9;
-  const bodyTop = groundY - 52;
-  const bodyBot = groundY - 28;
-  const hipX    = 0;
+  const scene = sceneColors[destination];
+  const pct   = Math.min(1, Math.max(0, progress));
 
   return (
-    <div className="w-full rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(180deg, #e0f2fe 0%, #bae6fd 55%, #7dd3fc 100%)' }}>
-      <svg
-        viewBox={`0 0 ${W} ${H}`}
-        className="w-full"
-        style={{ display: 'block' }}
-        aria-label="Break journey animation"
-      >
-        {/* ── Sky / background ── */}
-
-        {/* Sun */}
-        <circle cx={340} cy={28} r={16} fill="#fde68a" opacity={0.9} />
-        <circle cx={340} cy={28} r={12} fill="#fbbf24" opacity={0.7} />
-
+    <div
+      className={`relative h-52 w-full overflow-hidden rounded-3xl bg-gradient-to-br ${scene.sky} border border-white/70 shadow-inner`}
+    >
+      {/* ── Background elements ── */}
+      <div className="absolute inset-0 pointer-events-none">
         {/* Clouds */}
-        <g opacity={0.55}>
-          <ellipse cx={60}  cy={22} rx={22} ry={10} fill="white" />
-          <ellipse cx={78}  cy={18} rx={16} ry={9}  fill="white" />
-          <ellipse cx={44}  cy={20} rx={14} ry={8}  fill="white" />
-        </g>
-        <g opacity={0.45}>
-          <ellipse cx={200} cy={30} rx={18} ry={8}  fill="white" />
-          <ellipse cx={215} cy={26} rx={13} ry={7}  fill="white" />
-          <ellipse cx={186} cy={28} rx={12} ry={7}  fill="white" />
-        </g>
+        <div className="absolute top-5 left-8  w-14 h-7  bg-white/60 rounded-full blur-sm" />
+        <div className="absolute top-9 left-24 w-18 h-8  bg-white/50 rounded-full blur-sm" />
+        <div className="absolute top-4 right-20 w-10 h-6 bg-white/40 rounded-full blur-sm" />
 
-        {/* ── Ground ── */}
-        {/* Grass strip */}
-        <rect x={0} y={groundY} width={W} height={H - groundY} fill="#86efac" />
-        {/* Path */}
-        <rect x={0} y={groundY + 4} width={W} height={10} fill="#d1fae5" opacity={0.6} rx={2} />
-        {/* Ground line */}
-        <line x1={0} y1={groundY} x2={W} y2={groundY} stroke="#4ade80" strokeWidth={1.5} />
+        {/* Sun / moon depending on destination */}
+        {destination === 'beach' ? (
+          <div className="absolute top-4 right-8 w-10 h-10 bg-yellow-300/80 rounded-full blur-[2px]" />
+        ) : (
+          <div className="absolute top-5 right-10 w-8 h-8 bg-yellow-200/70 rounded-full blur-[1px]" />
+        )}
 
-        {/* ── Background trees (faint) ── */}
-        {[30, 110, 170, 260].map((tx, i) => (
-          <g key={i} opacity={0.22 + (i % 2) * 0.08}>
-            <rect x={tx - 3} y={groundY - 28} width={6} height={28} fill="#92400e" rx={2} />
-            <ellipse cx={tx} cy={groundY - 32} rx={14} ry={18} fill="#16a34a" />
-          </g>
-        ))}
+        {/* Ground gradient */}
+        <div className={`absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t ${scene.ground}`} />
 
-        {/* ── Bench (destination) ── */}
-        <g transform={`translate(316, ${groundY - 22})`}>
-          {/* legs */}
-          <rect x={2}  y={14} width={4} height={12} fill="#92400e" rx={1} />
-          <rect x={26} y={14} width={4} height={12} fill="#92400e" rx={1} />
-          {/* seat */}
-          <rect x={0}  y={12} width={32} height={4} fill="#b45309" rx={2} />
-          {/* back */}
-          <rect x={0}  y={4}  width={32} height={4} fill="#b45309" rx={2} />
-          <rect x={2}  y={4}  width={4}  height={10} fill="#92400e" rx={1} />
-          <rect x={26} y={4}  width={4}  height={10} fill="#92400e" rx={1} />
-          {/* destination glow when close */}
-          {progress > 0.7 && (
-            <motion.ellipse
-              cx={16} cy={26} rx={18} ry={4}
-              fill="#fbbf24"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: [0.2, 0.5, 0.2] }}
-              transition={{ duration: 1.2, repeat: Infinity }}
-            />
-          )}
-        </g>
-
-        {/* ── Walking person ── */}
-        <motion.g
-          animate={{ x: `${personX}%` }}
-          transition={{ type: 'tween', ease: 'linear', duration: 0.5 }}
-        >
-          {/* Slight vertical bounce while walking */}
-          <motion.g
-            animate={isActive ? {
-              y: isJogging ? [0, -4, 0, -4, 0] : [0, -2, 0, -2, 0]
-            } : { y: 0 }}
-            transition={{ duration: cycleDuration, repeat: Infinity, ease: 'easeInOut' }}
+        {/* Beach waves */}
+        {destination === 'beach' && (
+          <motion.div
+            className="absolute bottom-12 left-0 right-0 h-3 opacity-30"
+            animate={{ x: [0, 8, 0] }}
+            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
           >
-            {/* Shadow */}
-            <motion.ellipse
-              cx={0} cy={groundY - 1} rx={10} ry={3}
-              fill="rgba(0,0,0,0.12)"
-              animate={isActive ? { scaleX: [1, 0.8, 1] } : {}}
-              transition={{ duration: cycleDuration, repeat: Infinity }}
-            />
+            <svg viewBox="0 0 400 12" className="w-full h-full">
+              <path d="M0 6 Q50 0 100 6 Q150 12 200 6 Q250 0 300 6 Q350 12 400 6" fill="none" stroke="#38bdf8" strokeWidth="2" />
+            </svg>
+          </motion.div>
+        )}
+      </div>
 
-            {/* ── Left leg ── */}
-            <motion.line
-              x1={hipX} y1={bodyBot}
-              x2={hipX} y2={groundY}
-              stroke="#1d4ed8" strokeWidth={5} strokeLinecap="round"
-              animate={isActive ? { x2: [-5, 5, -5], y2: [groundY - 2, groundY, groundY - 2] } : {}}
-              transition={{ duration: cycleDuration, repeat: Infinity, ease: 'easeInOut' }}
-            />
-            {/* ── Right leg ── */}
-            <motion.line
-              x1={hipX} y1={bodyBot}
-              x2={hipX} y2={groundY}
-              stroke="#1d4ed8" strokeWidth={5} strokeLinecap="round"
-              animate={isActive ? { x2: [5, -5, 5], y2: [groundY, groundY - 2, groundY] } : {}}
-              transition={{ duration: cycleDuration, repeat: Infinity, ease: 'easeInOut' }}
-            />
+      {/* ── Ground path line ── */}
+      <div className="absolute bottom-16 left-6 right-6 h-px bg-gradient-to-r from-transparent via-slate-400/50 to-transparent" />
 
-            {/* ── Body ── */}
-            <rect
-              x={-6} y={bodyTop}
-              width={12} height={bodyBot - bodyTop}
-              fill="#3b82f6" rx={4}
-            />
-
-            {/* ── Left arm ── */}
-            <motion.line
-              x1={-6} y1={bodyTop + 6}
-              x2={-6} y2={bodyTop + 6}
-              stroke="#93c5fd" strokeWidth={4} strokeLinecap="round"
-              animate={isActive ? {
-                x2: [-14, -2, -14],
-                y2: [bodyTop + 14, bodyTop + 20, bodyTop + 14]
-              } : { x2: -12, y2: bodyTop + 18 }}
-              transition={{ duration: cycleDuration, repeat: Infinity, ease: 'easeInOut' }}
-            />
-            {/* ── Right arm ── */}
-            <motion.line
-              x1={6} y1={bodyTop + 6}
-              x2={6} y2={bodyTop + 6}
-              stroke="#93c5fd" strokeWidth={4} strokeLinecap="round"
-              animate={isActive ? {
-                x2: [14, 2, 14],
-                y2: [bodyTop + 20, bodyTop + 14, bodyTop + 20]
-              } : { x2: 12, y2: bodyTop + 18 }}
-              transition={{ duration: cycleDuration, repeat: Infinity, ease: 'easeInOut' }}
-            />
-
-            {/* ── Head ── */}
-            <circle cx={0} cy={bodyTop - headR - 1} r={headR} fill="#fde68a" />
-            {/* Hair */}
-            <path
-              d={`M ${-headR} ${bodyTop - headR * 2 + 2} 
-                  Q 0 ${bodyTop - headR * 2 - 8} ${headR} ${bodyTop - headR * 2 + 2}`}
-              fill="#92400e" strokeWidth={0}
-            />
-            {/* Eyes */}
-            <circle cx={-3} cy={bodyTop - headR - 2} r={1.2} fill="#1e293b" />
-            <circle cx={3}  cy={bodyTop - headR - 2} r={1.2} fill="#1e293b" />
-            {/* Smile */}
-            <path
-              d={`M -3 ${bodyTop - headR + 2} Q 0 ${bodyTop - headR + 5} 3 ${bodyTop - headR + 2}`}
-              stroke="#92400e" strokeWidth={1.2} fill="none" strokeLinecap="round"
-            />
-
-            {/* Jogging speed lines */}
-            {isJogging && isActive && (
-              <motion.g
-                animate={{ opacity: [0, 0.6, 0], x: [-4, -10] }}
-                transition={{ duration: 0.4, repeat: Infinity }}
-              >
-                <line x1={-14} y1={bodyTop + 4}  x2={-20} y2={bodyTop + 4}  stroke="#bfdbfe" strokeWidth={2} strokeLinecap="round" />
-                <line x1={-14} y1={bodyTop + 10} x2={-22} y2={bodyTop + 10} stroke="#bfdbfe" strokeWidth={1.5} strokeLinecap="round" />
-                <line x1={-14} y1={bodyTop + 16} x2={-19} y2={bodyTop + 16} stroke="#bfdbfe" strokeWidth={1} strokeLinecap="round" />
-              </motion.g>
-            )}
-          </motion.g>
-        </motion.g>
-
-        {/* ── Dotted path ahead of person ── */}
-        {progress < 0.95 && (
-          <motion.line
-            x1={`${personX + 4}%`} y1={groundY + 8}
-            x2="79%" y2={groundY + 8}
-            stroke="#a7f3d0" strokeWidth={2}
-            strokeDasharray="4 6"
-            strokeLinecap="round"
-            animate={{ opacity: [0.4, 0.8, 0.4] }}
-            transition={{ duration: 2, repeat: Infinity }}
+      {/* ── Destination (right side, bobbing) ── */}
+      <motion.div
+        className="absolute bottom-14 right-6 text-4xl drop-shadow-sm select-none"
+        animate={{ y: [0, -5, 0] }}
+        transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
+      >
+        {destinationEmojis[destination]}
+        {/* Glow ring when close */}
+        {pct > 0.75 && (
+          <motion.div
+            className="absolute inset-0 rounded-full bg-yellow-300/30 blur-md -z-10"
+            animate={{ scale: [1, 1.4, 1], opacity: [0.3, 0.6, 0.3] }}
+            transition={{ duration: 1, repeat: Infinity }}
           />
         )}
-      </svg>
+      </motion.div>
+
+      {/* ── Dotted path ahead ── */}
+      {pct < 0.92 && (
+        <motion.div
+          className="absolute bottom-[68px] h-px border-t-2 border-dashed border-slate-300/60"
+          style={{
+            left:  `calc(10% + ${pct * 68}%)`,
+            right: '10%',
+          }}
+          animate={{ opacity: [0.4, 0.8, 0.4] }}
+          transition={{ duration: 2, repeat: Infinity }}
+        />
+      )}
+
+      {/* ── Walking / jogging person ── */}
+      <motion.div
+        className="absolute bottom-14 text-5xl origin-bottom select-none"
+        animate={{
+          left: `calc(6% + ${pct * 68}%)`,
+          scale: isJogging ? 1.1 : 1,
+        }}
+        transition={{ type: 'spring', stiffness: 60, damping: 22 }}
+      >
+        {/* Body rock */}
+        <motion.div
+          animate={isActive ? {
+            rotate: isJogging ? [-14, 14] : [-7, 7],
+          } : { rotate: 0 }}
+          transition={{
+            duration: isJogging ? 0.26 : 0.5,
+            repeat: Infinity,
+            repeatType: 'reverse',
+            ease: 'easeInOut',
+          }}
+        >
+          {characterEmojis[character]}
+        </motion.div>
+
+        {/* Speed lines when jogging */}
+        {isJogging && isActive && (
+          <motion.div
+            className="absolute top-1/2 -left-6 flex flex-col gap-1 -translate-y-1/2"
+            animate={{ opacity: [0, 0.7, 0], x: [0, -6] }}
+            transition={{ duration: 0.35, repeat: Infinity }}
+          >
+            <div className="w-4 h-0.5 bg-blue-300 rounded-full" />
+            <div className="w-3 h-0.5 bg-blue-200 rounded-full" />
+            <div className="w-2 h-0.5 bg-blue-100 rounded-full" />
+          </motion.div>
+        )}
+      </motion.div>
+
+      {/* ── Bottom label ── */}
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap">
+        <span className="text-[10px] font-black tracking-widest text-slate-500 uppercase">
+          {isJogging ? '🏃 Almost there · ' : '🚶 Recharging · '}
+          {Math.round(pct * 100)}%
+        </span>
+      </div>
     </div>
   );
-};
+}

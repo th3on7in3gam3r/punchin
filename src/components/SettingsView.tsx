@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Bell, User, Clock, Trash2, Pause, Check, Plus, MapPin, X, Volume2, DollarSign, Percent, PersonStanding } from 'lucide-react';
+import { Bell, User, Clock, Trash2, Pause, Check, Plus, MapPin, X, Volume2, DollarSign, Percent } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { View, WorkDay, EntryStatus, WorkLocation, UserProfile } from '../types';
+import { View, WorkLocation, UserProfile, CharacterType, DestinationType } from '../types';
 import { Card } from './common/Card';
 import { Button3D } from './common/Button3D';
 import { cn } from '../lib/utils';
@@ -28,6 +28,10 @@ export const SettingsView = ({
   setDefaultReminderSound,
   showBreakAnimation,
   setShowBreakAnimation,
+  breakCharacter,
+  setBreakCharacter,
+  breakDestination,
+  setBreakDestination,
 }: {
   setView: (view: View) => void;
   clearAllData: () => void;
@@ -49,6 +53,10 @@ export const SettingsView = ({
   setDefaultReminderSound: (val: string) => void;
   showBreakAnimation: boolean;
   setShowBreakAnimation: (val: boolean) => void;
+  breakCharacter: CharacterType;
+  setBreakCharacter: (val: CharacterType) => void;
+  breakDestination: DestinationType;
+  setBreakDestination: (val: DestinationType) => void;
 }) => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
@@ -240,30 +248,103 @@ export const SettingsView = ({
           </div>
         </Card>
 
-        {/* Break Journey Animation toggle */}
-        <Card className="p-5 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-sky-100 rounded-lg text-sky-600">
-              <Pause size={20} />
+        {/* Break Journey Animation toggle + customisation */}
+        <Card className="p-5 space-y-5">
+          {/* Toggle row */}
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-sky-100 rounded-lg text-sky-600">
+                <Pause size={20} />
+              </div>
+              <div>
+                <p className="font-bold text-slate-700 text-sm">Break Journey Animation</p>
+                <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest">Walking person during breaks</p>
+              </div>
             </div>
-            <div>
-              <p className="font-bold text-slate-700 text-sm">Break Journey Animation</p>
-              <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest">Walking person during breaks</p>
-            </div>
+            <button
+              onClick={() => setShowBreakAnimation(!showBreakAnimation)}
+              className={cn(
+                "w-12 h-6 rounded-full relative transition-all duration-300 shrink-0",
+                showBreakAnimation ? "bg-blue-500" : "bg-slate-200"
+              )}
+            >
+              <motion.div
+                animate={{ x: showBreakAnimation ? 24 : 2 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                className="absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm"
+              />
+            </button>
           </div>
-          <button
-            onClick={() => setShowBreakAnimation(!showBreakAnimation)}
-            className={cn(
-              "w-12 h-6 rounded-full relative transition-all duration-300 shrink-0",
-              showBreakAnimation ? "bg-blue-500" : "bg-slate-200"
+
+          {/* Character + Destination pickers — only when animation is on */}
+          <AnimatePresence>
+            {showBreakAnimation && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="pt-4 border-t border-slate-100 space-y-5">
+                  {/* Character */}
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Character</p>
+                    <div className="grid grid-cols-4 gap-2">
+                      {(['default', 'business', 'athlete', 'casual'] as const).map(char => (
+                        <button
+                          key={char}
+                          onClick={() => setBreakCharacter(char)}
+                          className={cn(
+                            "aspect-square rounded-2xl text-3xl flex items-center justify-center transition-all active:scale-95 border-2",
+                            breakCharacter === char
+                              ? "bg-blue-500 border-blue-500 shadow-lg shadow-blue-200 scale-105"
+                              : "bg-white border-slate-100 hover:border-blue-200"
+                          )}
+                        >
+                          {char === 'default'  ? '🧍‍♂️' :
+                           char === 'business' ? '👨‍💼' :
+                           char === 'athlete'  ? '🏃‍♂️' : '😎'}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-4 gap-2 mt-1">
+                      {(['Default', 'Business', 'Athlete', 'Casual'] as const).map(label => (
+                        <p key={label} className="text-center text-[8px] font-black text-slate-400 uppercase tracking-wider">{label}</p>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Destination */}
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Destination</p>
+                    <div className="grid grid-cols-4 gap-2">
+                      {(['bench', 'coffee', 'home', 'beach'] as const).map(dest => (
+                        <button
+                          key={dest}
+                          onClick={() => setBreakDestination(dest)}
+                          className={cn(
+                            "aspect-square rounded-2xl text-3xl flex items-center justify-center transition-all active:scale-95 border-2",
+                            breakDestination === dest
+                              ? "bg-blue-500 border-blue-500 shadow-lg shadow-blue-200 scale-105"
+                              : "bg-white border-slate-100 hover:border-blue-200"
+                          )}
+                        >
+                          {dest === 'bench'  ? '🪑' :
+                           dest === 'coffee' ? '☕' :
+                           dest === 'home'   ? '🏠' : '🏖️'}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-4 gap-2 mt-1">
+                      {(['Bench', 'Coffee', 'Home', 'Beach'] as const).map(label => (
+                        <p key={label} className="text-center text-[8px] font-black text-slate-400 uppercase tracking-wider">{label}</p>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
             )}
-          >
-            <motion.div
-              animate={{ x: showBreakAnimation ? 24 : 2 }}
-              transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-              className="absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm"
-            />
-          </button>
+          </AnimatePresence>
         </Card>
 
         {/* Hourly Billing Rate */}

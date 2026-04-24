@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { format, isSameDay } from 'date-fns';
-import { WorkDay, EntryStatus, TimeLog, Reminder, WorkLocation, UserProfile, DailyStatus } from '../types';
+import { WorkDay, EntryStatus, TimeLog, Reminder, WorkLocation, UserProfile, DailyStatus, CharacterType, DestinationType } from '../types';
 
 const SOUNDS = [
   { name: 'Chime', url: 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3' },
@@ -85,6 +85,14 @@ export function useWorkTracker() {
     return saved || SOUNDS[0].url;
   });
 
+  const [breakCharacter, setBreakCharacter] = useState<CharacterType>(() => {
+    return (localStorage.getItem('punchin_break_character') as CharacterType) || 'default';
+  });
+
+  const [breakDestination, setBreakDestination] = useState<DestinationType>(() => {
+    return (localStorage.getItem('punchin_break_destination') as DestinationType) || 'bench';
+  });
+
   // Persistence
   useEffect(() => {
     localStorage.setItem('punchin_data', JSON.stringify(workDays));
@@ -129,6 +137,14 @@ export function useWorkTracker() {
   useEffect(() => {
     localStorage.setItem('punchin_default_reminder_sound', defaultReminderSound);
   }, [defaultReminderSound]);
+
+  useEffect(() => {
+    localStorage.setItem('punchin_break_character', breakCharacter);
+  }, [breakCharacter]);
+
+  useEffect(() => {
+    localStorage.setItem('punchin_break_destination', breakDestination);
+  }, [breakDestination]);
 
   // Timer & Reminder Logic
   useEffect(() => {
@@ -406,6 +422,10 @@ export function useWorkTracker() {
     setDailyStatuses,
     defaultReminderSound,
     setDefaultReminderSound,
+    breakCharacter,
+    setBreakCharacter,
+    breakDestination,
+    setBreakDestination,
     clearAllData
   };
 }

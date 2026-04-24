@@ -10,7 +10,8 @@ import { WorkDay, WorkLocation, EntryStatus, TimeLog, DailyStatus, UserProfile }
 import { Card } from './common/Card';
 import { Button3D } from './common/Button3D';
 import { cn } from '../lib/utils';
-import { BreakJourneyAnimation } from './BreakJourneyAnimation';
+import BreakJourneyAnimationDefault from './BreakJourneyAnimation';
+import { CharacterType, DestinationType } from '../types';
 
 interface HomeViewProps {
   currentTime: Date;
@@ -29,6 +30,8 @@ interface HomeViewProps {
   hourlyRate: number;
   dailyGoalHours?: number;
   showBreakAnimation?: boolean;
+  breakCharacter?: CharacterType;
+  breakDestination?: DestinationType;
 }
 
 // ── Streak helper ──────────────────────────────────────────────────────────────
@@ -66,6 +69,8 @@ export const HomeView = ({
   workLocations, selectedLocationId, setSelectedLocationId,
   dailyStatuses, userProfile, hourlyRate, dailyGoalHours = 8,
   showBreakAnimation = true,
+  breakCharacter = 'default',
+  breakDestination = 'bench',
 }: HomeViewProps) => {
   const [confirmAction, setConfirmAction] = useState<TimeLog['type'] | null>(null);
 
@@ -392,9 +397,11 @@ export const HomeView = ({
           {/* Journey animation or classic card */}
           {showBreakAnimation ? (
             <div className="rounded-2xl overflow-hidden shadow-md">
-              <BreakJourneyAnimation
+              <BreakJourneyAnimationDefault
                 progress={elapsedFraction}
                 isActive={!breakDone}
+                character={breakCharacter}
+                destination={breakDestination}
               />
               {/* Time remaining overlay */}
               <div className="bg-white/90 backdrop-blur-sm px-4 py-3 flex items-center justify-between border-t border-orange-100">

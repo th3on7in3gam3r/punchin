@@ -58,3 +58,6 @@ export interface UserSettings {
   breakDuration: 15 | 30 | 60;
   workDaysOfWeek: number[]; // 0-6
 }
+
+export type CharacterType = 'default' | 'business' | 'athlete' | 'casual';
+export type DestinationType = 'bench' | 'coffee' | 'home' | 'beach';

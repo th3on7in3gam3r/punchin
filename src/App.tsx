@@ -60,6 +60,10 @@ export default function App() {
     setDailyStatuses,
     defaultReminderSound,
     setDefaultReminderSound,
+    breakCharacter,
+    setBreakCharacter,
+    breakDestination,
+    setBreakDestination,
     clearAllData
   } = useWorkTracker();
 
@@ -282,6 +286,8 @@ export default function App() {
                 userProfile={userProfile}
                 hourlyRate={hourlyRate}
                 showBreakAnimation={showBreakAnimation}
+                breakCharacter={breakCharacter}
+                breakDestination={breakDestination}
               />
             )}
             {view === 'entries' && (
@@ -336,6 +342,10 @@ export default function App() {
                 setDefaultReminderSound={setDefaultReminderSound}
                 showBreakAnimation={showBreakAnimation}
                 setShowBreakAnimation={setShowBreakAnimation}
+                breakCharacter={breakCharacter}
+                setBreakCharacter={setBreakCharacter}
+                breakDestination={breakDestination}
+                setBreakDestination={setBreakDestination}
               />
             )}
             {view === 'reminders' && (
