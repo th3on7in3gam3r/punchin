@@ -503,7 +503,7 @@ export const HomeView = ({
 
   // ── Main render ─────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-6 pb-12 overflow-hidden">
+    <div className="space-y-6 pb-12 overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 rounded-3xl -mx-1 px-1 pt-1">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
@@ -526,7 +526,7 @@ export const HomeView = ({
       </motion.div>
 
       {/* Timer ring card */}
-      <Card className="relative p-6 border-none bg-white shadow-xl shadow-blue-100/40 flex flex-col items-center gap-8 overflow-hidden">
+      <Card className="relative p-6 border-none bg-white/80 backdrop-blur-xl shadow-xl shadow-blue-100/40 flex flex-col items-center gap-8 overflow-hidden border border-white/60">
         {/* Animated bg blob */}
         <motion.div
           animate={{ scale: [1, 1.15, 1], rotate: [0, 60, 0] }}
