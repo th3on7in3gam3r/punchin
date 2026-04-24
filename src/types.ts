@@ -11,11 +11,12 @@ export interface WorkLocation {
   id: string;
   name: string;
   address: string;
+  emoji?: string; // optional display emoji
 }
 
 export interface WorkDay {
   id: string;
-  date: string; // ISO date string
+  date: string;
   logs: TimeLog[];
   totalWorkMinutes: number;
   totalBreakMinutes: number;
@@ -23,24 +24,25 @@ export interface WorkDay {
 
 export type View = 'home' | 'entries' | 'calendar' | 'report' | 'settings' | 'reminders';
 
-export type Theme = 'light' | 'dark' | 'auto';
+export type Theme = 'light' | 'dark' | 'system';
 
 export interface Reminder {
   id: string;
   label: string;
   type: 'fixed' | 'interval';
-  time?: string; // HH:mm for fixed
-  intervalMinutes?: number; // for interval
-  days: number[]; // 0-6
+  time?: string;
+  intervalMinutes?: number;
+  days: number[];
   enabled: boolean;
   sound: string;
-  lastTriggered?: number; // timestamp to prevent double triggers
+  lastTriggered?: number;
 }
 
 export interface UserProfile {
   name: string;
   employeeId: string;
   taxRate?: number;
+  avatar?: string;
 }
 
 export interface DailyStatus {
@@ -56,7 +58,7 @@ export interface UserSettings {
   defaultWorkStart: string;
   defaultWorkEnd: string;
   breakDuration: 15 | 30 | 60;
-  workDaysOfWeek: number[]; // 0-6
+  workDaysOfWeek: number[];
 }
 
 export type CharacterType = 'default' | 'business' | 'athlete' | 'casual';
