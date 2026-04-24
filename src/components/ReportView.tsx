@@ -6,7 +6,7 @@ import {
 import {
   Clock, ChevronLeft, ChevronRight, Download, ArrowRight, MapPin,
   TrendingUp, Zap, Target, BarChart3, PieChart as PieIcon, Activity,
-  DollarSign, Flame, Award
+  DollarSign, Flame, Award, Sparkles, Loader2
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -46,6 +46,10 @@ export const ReportView = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadError,   setUploadError]   = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
+
+  // ── AI Insights ────────────────────────────────────────────────────────────
+  const [aiInsight, setAiInsight]           = useState<string>('');
+  const [isLoadingInsight, setIsLoadingInsight] = useState(false);
 
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#ec4899'];
 
@@ -252,6 +256,75 @@ export const ReportView = ({
       setUploadSuccess(`${parsedLogs.length} records imported`);
       if (fileInputRef.current) fileInputRef.current.value = '';
     } catch (err: any) { setUploadError(err?.message || 'Failed to parse CSV'); }
+  };
+
+  // ── AI Insights generator ─────────────────────────────────────────────────
+  const generateAIInsight = async () => {
+    setIsLoadingInsight(true);
+    setAiInsight('');
+
+    const apiKey = process.env.GEMINI_API_KEY;
+
+    // Build a concise context string from real data
+    const ctx = [
+      `Period: ${rangeType}`,
+      `Total hours: ${stats.totalHours.toFixed(1)}h`,
+      `Goal: ${stats.totalTarget.toFixed(1)}h`,
+      `Efficiency: ${stats.completion}%`,
+      `Working days: ${stats.workingDays}`,
+      `Daily average: ${stats.avgHours.toFixed(1)}h`,
+      `Streak: ${streak} days`,
+      hourlyRate > 0 ? `Gross earnings: $${stats.grossEarnings.toFixed(2)}` : '',
+      stats.peakDay?.hours ? `Peak day: ${stats.peakDay.hours}h on ${stats.peakDay.fullDate}` : '',
+    ].filter(Boolean).join('. ');
+
+    // Try real Gemini API first
+    if (apiKey) {
+      try {
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{
+                parts: [{
+                  text: `You are a productivity coach. Based on this work data, give ONE concise, actionable insight (2-3 sentences max, friendly tone, include an emoji): ${ctx}`
+                }]
+              }]
+            })
+          }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (text) {
+            setAiInsight(text.trim());
+            setIsLoadingInsight(false);
+            return;
+          }
+        }
+      } catch {
+        // fall through to placeholder
+      }
+    }
+
+    // Fallback: smart placeholder using real stats
+    await new Promise(r => setTimeout(r, 800));
+    const fallbacks = [
+      `You've logged ${stats.totalHours.toFixed(1)}h this period at ${stats.completion}% of your goal. ${stats.completion >= 100 ? 'Target crushed — great discipline! 🎯' : 'Keep pushing, you\'re close! 💪'}`,
+      streak > 0
+        ? `${streak}-day streak active! Consistency is your superpower. Protect your routine and you'll hit your targets. 🔥`
+        : `Start a streak today — even one focused session builds momentum. Your best work is ahead! ⚡`,
+      stats.peakDay?.hours
+        ? `Your peak was ${stats.peakDay.hours}h on ${format(parseISO(stats.peakDay.fullDate), 'MMM dd')}. Try to replicate those conditions more often. 📈`
+        : `Log your first session to unlock personalized insights about your peak performance times. 🚀`,
+      hourlyRate > 0
+        ? `At this pace you're on track to earn $${(stats.grossEarnings * (30 / Math.max(stats.workingDays, 1))).toFixed(0)}/month. ${stats.completion >= 80 ? 'Solid trajectory! 💰' : 'A few more hours could make a big difference. 💡'}`
+        : `Add your hourly rate in Settings to unlock earnings projections and financial insights. 💰`,
+    ];
+    setAiInsight(fallbacks[Math.floor(Math.random() * fallbacks.length)]);
+    setIsLoadingInsight(false);
   };
 
   // ── render ───────────────────────────────────────────────────────────────────
@@ -635,6 +708,59 @@ export const ReportView = ({
           </motion.div>
         ))}
       </div>
+
+      {/* ── AI Insights ── */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-3xl p-6"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center">
+              <Sparkles size={18} />
+            </div>
+            <div>
+              <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight">AI Insights</h3>
+              <p className="text-[10px] font-bold text-slate-400">Powered by Gemini</p>
+            </div>
+          </div>
+          <button
+            onClick={generateAIInsight}
+            disabled={isLoadingInsight}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-purple-200 rounded-2xl text-[10px] font-black text-purple-700 uppercase tracking-widest hover:bg-purple-50 active:scale-95 transition-all disabled:opacity-60"
+          >
+            {isLoadingInsight
+              ? <><Loader2 size={13} className="animate-spin" /> Thinking…</>
+              : <><Sparkles size={13} /> Get Insight</>
+            }
+          </button>
+        </div>
+
+        <AnimatePresence mode="wait">
+          {aiInsight ? (
+            <motion.p
+              key="insight"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="text-sm font-medium text-slate-700 leading-relaxed"
+            >
+              {aiInsight}
+            </motion.p>
+          ) : (
+            <motion.p
+              key="placeholder"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-sm text-slate-400 italic"
+            >
+              Click "Get Insight" for a personalised analysis of your work patterns.
+            </motion.p>
+          )}
+        </AnimatePresence>
+      </motion.div>
 
     </div>
   );
