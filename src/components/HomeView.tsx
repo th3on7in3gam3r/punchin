@@ -503,7 +503,7 @@ export const HomeView = ({
 
   // ── Main render ─────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-6 pb-12 overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 rounded-3xl -mx-1 px-1 pt-1">
+    <div className="space-y-6 pb-12 overflow-hidden">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}

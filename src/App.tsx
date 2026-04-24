@@ -113,7 +113,7 @@ export default function App() {
 
   // ── render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-white text-slate-900 font-sans pb-24">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 text-slate-900 font-sans pb-24">
       <InstallBanner />
 
       <WorkStatusModal
