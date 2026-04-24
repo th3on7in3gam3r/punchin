@@ -10,6 +10,7 @@ import { WorkDay, WorkLocation, EntryStatus, TimeLog, DailyStatus, UserProfile }
 import { Card } from './common/Card';
 import { Button3D } from './common/Button3D';
 import { cn } from '../lib/utils';
+import { BreakJourneyAnimation } from './BreakJourneyAnimation';
 
 interface HomeViewProps {
   currentTime: Date;
@@ -27,6 +28,7 @@ interface HomeViewProps {
   userProfile: UserProfile;
   hourlyRate: number;
   dailyGoalHours?: number;
+  showBreakAnimation?: boolean;
 }
 
 // ── Streak helper ──────────────────────────────────────────────────────────────
@@ -62,7 +64,8 @@ export const HomeView = ({
   currentTime, currentStatus, handleAction, today, workDays,
   formatMinutes, breakDuration, setBreakDuration,
   workLocations, selectedLocationId, setSelectedLocationId,
-  dailyStatuses, userProfile, hourlyRate, dailyGoalHours = 8
+  dailyStatuses, userProfile, hourlyRate, dailyGoalHours = 8,
+  showBreakAnimation = true,
 }: HomeViewProps) => {
   const [confirmAction, setConfirmAction] = useState<TimeLog['type'] | null>(null);
 
@@ -367,46 +370,89 @@ export const HomeView = ({
     if (!hasEndedBreak) {
       const breakStart = currentSessionLogs.find(l => l.type === 'break_start')?.timestamp ?? 0;
       const elapsedMins = (currentTime.getTime() - breakStart) / 60000;
+      const elapsedFraction = Math.min(1, elapsedMins / breakDuration);
+
+      // remaining time display
+      const elapsed = currentTime.getTime() - breakStart;
+      const totalMs = Math.max(0, breakDuration * 60000 - elapsed);
+      const remMins = Math.floor(totalMs / 60000);
+      const remSecs = Math.floor((totalMs % 60000) / 1000);
+      const breakDone = totalMs <= 0;
 
       return (
-        <div className="w-full space-y-6">
-          <Card className="p-6 bg-slate-900 border-none text-white overflow-hidden relative group">
-            <div className="absolute top-0 right-0 p-8 opacity-10 animate-pulse">
-              <Pause size={80} />
+        <div className="w-full space-y-4">
+          {/* On Break pill */}
+          <div className="flex items-center justify-center">
+            <div className="flex items-center gap-2 px-4 py-1.5 bg-orange-100 border border-orange-200 rounded-full">
+              <div className="w-2 h-2 bg-orange-500 rounded-full animate-ping" />
+              <span className="text-xs font-black text-orange-600 uppercase tracking-widest">On Break</span>
             </div>
-            <div className="relative space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-orange-500 rounded-full animate-ping" />
-                <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Break Active</p>
+          </div>
+
+          {/* Journey animation or classic card */}
+          {showBreakAnimation ? (
+            <div className="rounded-2xl overflow-hidden shadow-md">
+              <BreakJourneyAnimation
+                progress={elapsedFraction}
+                isActive={!breakDone}
+              />
+              {/* Time remaining overlay */}
+              <div className="bg-white/90 backdrop-blur-sm px-4 py-3 flex items-center justify-between border-t border-orange-100">
+                <div>
+                  <p className="text-[9px] font-black text-orange-400 uppercase tracking-widest">Break time remaining</p>
+                  {breakDone ? (
+                    <p className="text-lg font-black text-emerald-500 tracking-tight">Break complete!</p>
+                  ) : (
+                    <p className="text-2xl font-black text-slate-800 tabular-nums tracking-tighter">
+                      {remMins.toString().padStart(2, '0')}
+                      <span className="text-orange-400 mx-0.5">:</span>
+                      {remSecs.toString().padStart(2, '0')}
+                    </p>
+                  )}
+                </div>
+                {/* Mini progress bar */}
+                <div className="w-24 h-2 bg-orange-100 rounded-full overflow-hidden">
+                  <motion.div
+                    animate={{ width: `${elapsedFraction * 100}%` }}
+                    className="h-full bg-orange-400 rounded-full"
+                    transition={{ duration: 0.5 }}
+                  />
+                </div>
               </div>
-              {(() => {
-                const elapsed = currentTime.getTime() - breakStart;
-                const total   = Math.max(0, breakDuration * 60000 - elapsed);
-                const mins    = Math.floor(total / 60000);
-                const secs    = Math.floor((total % 60000) / 1000);
-                return total <= 0 ? (
+            </div>
+          ) : (
+            <Card className="p-6 bg-slate-900 border-none text-white overflow-hidden relative">
+              <div className="absolute top-0 right-0 p-8 opacity-10 animate-pulse">
+                <Pause size={80} />
+              </div>
+              <div className="relative space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-orange-500 rounded-full animate-ping" />
+                  <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Break Active</p>
+                </div>
+                {breakDone ? (
                   <p className="text-3xl font-black tracking-tighter text-emerald-400">Break complete!</p>
                 ) : (
                   <div className="flex items-baseline gap-2">
                     <p className="text-5xl font-black tracking-tighter tabular-nums">
-                      {mins.toString().padStart(2, '0')}
+                      {remMins.toString().padStart(2, '0')}
                       <span className="text-blue-500 opacity-80 mx-1">:</span>
-                      {secs.toString().padStart(2, '0')}
+                      {remSecs.toString().padStart(2, '0')}
                     </p>
                     <p className="text-sm font-black text-slate-500 uppercase tracking-widest">left</p>
                   </div>
-                );
-              })()}
-              <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${Math.min(100, (elapsedMins / breakDuration) * 100)}%` }}
-                  className="h-full bg-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.8)]"
-                />
+                )}
+                <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+                  <motion.div
+                    animate={{ width: `${elapsedFraction * 100}%` }}
+                    className="h-full bg-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.8)]"
+                  />
+                </div>
               </div>
-            </div>
-          </Card>
+            </Card>
+          )}
 
+          {/* Break duration selector */}
           <div className="flex gap-2">
             {([15, 30, 60] as const).map(d => (
               <button
@@ -414,7 +460,9 @@ export const HomeView = ({
                 onClick={() => setBreakDuration(d)}
                 className={cn(
                   "flex-1 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all",
-                  breakDuration === d ? "bg-slate-900 text-white border-slate-900 shadow-xl" : "bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-400"
+                  breakDuration === d
+                    ? "bg-slate-900 text-white border-slate-900 shadow-xl"
+                    : "bg-white border-slate-100 text-slate-400"
                 )}
               >
                 {d}m

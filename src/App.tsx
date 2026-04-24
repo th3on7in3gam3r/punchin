@@ -65,6 +65,15 @@ export default function App() {
 
   const [selectedLocationId, setSelectedLocationId] = useState<string | undefined>(undefined);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showBreakAnimation, setShowBreakAnimation] = useState<boolean>(() => {
+    const saved = localStorage.getItem('punchin_break_animation');
+    return saved === null ? true : saved === 'true';
+  });
+
+  // persist the toggle
+  React.useEffect(() => {
+    localStorage.setItem('punchin_break_animation', String(showBreakAnimation));
+  }, [showBreakAnimation]);
 
   const sessionDuration = useMemo(() => {
     const logs = today.logs;
@@ -272,6 +281,7 @@ export default function App() {
                 dailyStatuses={dailyStatuses}
                 userProfile={userProfile}
                 hourlyRate={hourlyRate}
+                showBreakAnimation={showBreakAnimation}
               />
             )}
             {view === 'entries' && (
@@ -324,6 +334,8 @@ export default function App() {
                 setDefaultWorkEnd={setDefaultWorkEnd}
                 defaultReminderSound={defaultReminderSound}
                 setDefaultReminderSound={setDefaultReminderSound}
+                showBreakAnimation={showBreakAnimation}
+                setShowBreakAnimation={setShowBreakAnimation}
               />
             )}
             {view === 'reminders' && (

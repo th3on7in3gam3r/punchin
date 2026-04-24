@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bell, User, Clock, Trash2, Pause, Check, Plus, MapPin, X, Volume2, DollarSign, Percent } from 'lucide-react';
+import { Bell, User, Clock, Trash2, Pause, Check, Plus, MapPin, X, Volume2, DollarSign, Percent, PersonStanding } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { View, WorkDay, EntryStatus, WorkLocation, UserProfile } from '../types';
 import { Card } from './common/Card';
@@ -25,7 +25,9 @@ export const SettingsView = ({
   defaultWorkEnd,
   setDefaultWorkEnd,
   defaultReminderSound,
-  setDefaultReminderSound
+  setDefaultReminderSound,
+  showBreakAnimation,
+  setShowBreakAnimation,
 }: {
   setView: (view: View) => void;
   clearAllData: () => void;
@@ -45,6 +47,8 @@ export const SettingsView = ({
   setDefaultWorkEnd: (val: string) => void;
   defaultReminderSound: string;
   setDefaultReminderSound: (val: string) => void;
+  showBreakAnimation: boolean;
+  setShowBreakAnimation: (val: boolean) => void;
 }) => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
@@ -234,6 +238,32 @@ export const SettingsView = ({
               ))}
             </div>
           </div>
+        </Card>
+
+        {/* Break Journey Animation toggle */}
+        <Card className="p-5 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-sky-100 rounded-lg text-sky-600">
+              <Pause size={20} />
+            </div>
+            <div>
+              <p className="font-bold text-slate-700 text-sm">Break Journey Animation</p>
+              <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest">Walking person during breaks</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowBreakAnimation(!showBreakAnimation)}
+            className={cn(
+              "w-12 h-6 rounded-full relative transition-all duration-300 shrink-0",
+              showBreakAnimation ? "bg-blue-500" : "bg-slate-200"
+            )}
+          >
+            <motion.div
+              animate={{ x: showBreakAnimation ? 24 : 2 }}
+              transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+              className="absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm"
+            />
+          </button>
         </Card>
 
         {/* Hourly Billing Rate */}
