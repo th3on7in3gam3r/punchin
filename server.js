@@ -63,26 +63,25 @@ ensureTables().catch(console.error);
 app.post('/api/punch', async (req, res) => {
   try {
     const body = req.body;
-    const type = body.type || body.action; // Support both names
+    const type       = body.type || body.action;
     const locationId = body.locationId;
+    const now        = new Date();
+    const dateStr    = body.date || now.toISOString().split('T')[0];
+    const timestamp  = body.timestamp || now.getTime();
+    // Use the client-supplied id if present (edit/save flow), otherwise generate one
+    const logId      = body.id || crypto.randomUUID();
 
-    const now = new Date();
-    const dateStr = body.date || now.toISOString().split('T')[0]; // yyyy-mm-dd
-    const timestamp = body.timestamp || now.getTime();
-    const logId = crypto.randomUUID();
-
-    // Insert the new time log
+    // UPSERT — insert new or update existing row by primary key
     await sql`
       INSERT INTO time_logs (id, work_day_date, type, timestamp, location_id)
       VALUES (${logId}, ${dateStr}, ${type}, ${timestamp}, ${locationId || null})
+      ON CONFLICT (id) DO UPDATE
+        SET type        = EXCLUDED.type,
+            timestamp   = EXCLUDED.timestamp,
+            location_id = EXCLUDED.location_id
     `;
 
-    res.json({
-      success: true,
-      message: `Successfully logged ${type}`,
-      date: dateStr
-    });
-
+    res.json({ success: true, message: `Saved ${type}`, date: dateStr });
   } catch (error) {
     console.error("Punch error:", error);
     res.status(500).json({ error: error.message || "Database error" });

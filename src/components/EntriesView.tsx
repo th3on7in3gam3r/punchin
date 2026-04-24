@@ -27,6 +27,7 @@ export const EntriesView = ({
   const [editingDayId, setEditingDayId]         = useState<string | null>(null);
   const [showAddEntry, setShowAddEntry]         = useState(false);
   const [visibleCount, setVisibleCount]         = useState(PAGE_SIZE);
+  const [savedDayId, setSavedDayId]             = useState<string | null>(null);
 
   // ── helpers ────────────────────────────────────────────────────────────────
   const toggleDay = (id: string) =>
@@ -75,6 +76,31 @@ export const EntriesView = ({
       if (d.id !== dayId) return d;
       return recalculateDay(d, [...d.logs, newLog].sort((a, b) => a.timestamp - b.timestamp));
     }));
+  };
+
+  // Sync all logs for a day to the DB and show confirmation
+  const handleSaveDay = async (dayId: string) => {
+    const day = workDays.find(d => d.id === dayId);
+    if (!day) return;
+    try {
+      await Promise.all(day.logs.map(log =>
+        fetch('/api/punch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: log.id,          // pass existing id → triggers ON CONFLICT UPDATE
+            action: log.type,
+            locationId: log.locationId,
+            timestamp: log.timestamp,
+            date: day.date,
+          }),
+        })
+      ));
+      setSavedDayId(dayId);
+      setTimeout(() => setSavedDayId(null), 2500);
+    } catch (err) {
+      console.error('Save failed:', err);
+    }
   };
 
   const getLogConfig = (type: TimeLog['type']) => {
@@ -286,12 +312,27 @@ export const EntriesView = ({
                         {/* Edit toggle */}
                         <div className="flex items-center justify-between">
                           <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Timeline</p>
-                          <button
-                            onClick={e => { e.stopPropagation(); setEditingDayId(editingDayId === day.id ? null : day.id); }}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-[9px] font-black text-slate-600 uppercase tracking-widest hover:bg-slate-50 transition-colors"
-                          >
-                            {editingDayId === day.id ? <><X size={11} /> Done</> : <><Edit2 size={11} /> Edit</>}
-                          </button>
+                          <div className="flex items-center gap-2">
+                            {editingDayId === day.id && (
+                              <button
+                                onClick={e => { e.stopPropagation(); handleSaveDay(day.id); }}
+                                className={cn(
+                                  "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all",
+                                  savedDayId === day.id
+                                    ? "bg-emerald-500 text-white border border-emerald-500"
+                                    : "bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100"
+                                )}
+                              >
+                                {savedDayId === day.id ? '✓ Saved' : 'Save'}
+                              </button>
+                            )}
+                            <button
+                              onClick={e => { e.stopPropagation(); setEditingDayId(editingDayId === day.id ? null : day.id); }}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-white/80 border border-slate-200 rounded-xl text-[9px] font-black text-slate-600 uppercase tracking-widest hover:bg-slate-50 transition-colors"
+                            >
+                              {editingDayId === day.id ? <><X size={11} /> Done</> : <><Edit2 size={11} /> Edit</>}
+                            </button>
+                          </div>
                         </div>
 
                         {/* Log items */}
