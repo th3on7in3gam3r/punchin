@@ -25,6 +25,7 @@ import { RemindersView } from './components/RemindersView';
 import { SettingsView } from './components/SettingsView';
 import { NavItem } from './components/common/NavItem';
 import { WorkStatusModal } from './components/WorkStatusModal';
+import { InstallBanner } from './components/InstallBanner';
 import { TimeLog } from './types';
 
 export default function App() {
@@ -138,6 +139,8 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-white text-slate-900 font-sans pb-24">
+      {/* PWA install banner — session-only dismiss */}
+      <InstallBanner />
       {/* Work Status Modal */}
       <WorkStatusModal 
         workDaysOfWeek={workDaysOfWeek}
@@ -258,7 +261,8 @@ export default function App() {
                 currentTime={currentTime} 
                 currentStatus={currentStatus} 
                 handleAction={(type, locId) => handleAction(type, locId || selectedLocationId)} 
-                today={today} 
+                today={today}
+                workDays={workDays}
                 formatMinutes={formatMinutes} 
                 breakDuration={breakDuration}
                 setBreakDuration={setBreakDuration}

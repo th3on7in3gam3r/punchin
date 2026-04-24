@@ -23,6 +23,8 @@ export interface WorkDay {
 
 export type View = 'home' | 'entries' | 'calendar' | 'report' | 'settings' | 'reminders';
 
+export type Theme = 'light' | 'dark' | 'auto';
+
 export interface Reminder {
   id: string;
   label: string;
