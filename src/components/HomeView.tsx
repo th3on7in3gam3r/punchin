@@ -468,8 +468,8 @@ export const HomeView = ({
                 className={cn(
                   "flex-1 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all",
                   breakDuration === d
-                    ? "bg-slate-900 text-white border-slate-900 shadow-xl"
-                    : "bg-white border-slate-100 text-slate-400"
+                    ? "bg-blue-600 text-white border-blue-600 shadow-xl"
+                    : "bg-white/80 border-slate-200 text-slate-500 hover:border-blue-300"
                 )}
               >
                 {d}m
@@ -503,7 +503,7 @@ export const HomeView = ({
 
   // ── Main render ─────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-6 pb-12 overflow-hidden">
+    <div className="space-y-6 pb-12 overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 rounded-3xl -mx-1 px-1 pt-1">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
