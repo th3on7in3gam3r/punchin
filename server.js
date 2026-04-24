@@ -2,9 +2,12 @@ import express from 'express';
 import { neon } from '@neondatabase/serverless';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 dotenv.config();
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const port = process.env.PORT || 3001;
 
@@ -14,6 +17,10 @@ const sql = neon(DB_URL);
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Serve the Vite build output (dist/) for all non-API routes
+const distPath = path.join(__dirname, 'dist');
+app.use(express.static(distPath));
 
 // Create tables if they don't exist (safe to run every time)
 async function ensureTables() {
@@ -132,6 +139,12 @@ app.post('/api/settings', async (req, res) => {
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
+});
+
+// SPA fallback — serve index.html for any non-API route
+// This makes React Router and PWA manifest work correctly
+app.get('*', (req, res) => {
+  res.sendFile(path.join(distPath, 'index.html'));
 });
 
 app.listen(port, () => {
