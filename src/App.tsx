@@ -17,11 +17,11 @@ import { SettingsView }    from './components/SettingsView';
 import { WorkStatusModal } from './components/WorkStatusModal';
 import { InstallBanner }   from './components/InstallBanner';
 import { BottomNavigation } from './components/BottomNavigation';
+import { NotificationBell } from './components/NotificationBell';
 
 export default function App() {
   const [view, setView] = useState<View>('home');
   const [selectedLocationId, setSelectedLocationId] = useState<string | undefined>(undefined);
-  const [showNotifications, setShowNotifications] = useState(false);
 
   // ── hooks ──────────────────────────────────────────────────────────────────
   const tracker = useWorkTracker();
@@ -127,61 +127,7 @@ export default function App() {
         )}
 
         {/* Bell */}
-        <div className="relative">
-          <button
-            onClick={() => setShowNotifications(v => !v)}
-            className={cn('w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90',
-              notificationAlerts.length > 0 ? 'bg-rose-100 text-rose-600 animate-bounce shadow-lg shadow-rose-200' : 'bg-slate-100 text-slate-400')}
-          >
-            <Bell size={18} />
-            {notificationAlerts.length > 0 && <span className="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 border-2 border-white rounded-full" />}
-          </button>
-
-          <AnimatePresence>
-            {showNotifications && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
-                <motion.div
-                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                  className="absolute top-full right-0 mt-3 w-64 bg-white border border-slate-100 rounded-2xl shadow-2xl p-4 z-50"
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Alerts</p>
-                    {notificationAlerts.length > 0 && (
-                      <span className="px-2 py-0.5 bg-rose-50 text-rose-600 text-[9px] font-black rounded-full">{notificationAlerts.length}</span>
-                    )}
-                  </div>
-                  {notificationAlerts.length > 0 ? (
-                    <div className="space-y-3">
-                      {notificationAlerts.map((a, i) => (
-                        <div key={i} className="flex items-start gap-3 p-2 rounded-xl hover:bg-slate-50 group">
-                          <div className="w-1.5 h-1.5 bg-rose-500 rounded-full mt-1.5 shrink-0" />
-                          <div>
-                            <p className="text-xs font-black text-slate-700">{a.label}</p>
-                            <div className="flex items-center gap-1 mt-0.5 text-slate-400">
-                              <Clock size={10} />
-                              <p className="text-[10px] font-bold uppercase tracking-wider">Since {a.time}</p>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="py-4 text-center">
-                      <Check size={24} className="mx-auto text-emerald-400 mb-2" />
-                      <p className="text-xs font-bold text-slate-500">All clear!</p>
-                    </div>
-                  )}
-                  <button onClick={() => setShowNotifications(false)} className="w-full mt-4 py-2 bg-slate-50 hover:bg-slate-100 rounded-xl text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                    Dismiss
-                  </button>
-                </motion.div>
-              </>
-            )}
-          </AnimatePresence>
-        </div>
+        <NotificationBell />
       </header>
 
       {/* ── Main content ── */}
