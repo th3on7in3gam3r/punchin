@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { format } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import { Clock, Bell, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { View } from './types';
@@ -43,6 +43,23 @@ export default function App() {
     showBreakAnimation, setShowBreakAnimation,
     dailyGoalHours,
   } = settings;
+
+  // ── streak (same logic as HomeView) ───────────────────────────────────────
+  const streak = useMemo(() => {
+    let s = 0;
+    let d = new Date();
+    const todayStr = format(d, 'yyyy-MM-dd');
+    if (!workDays.some(w => w.date === todayStr && w.logs.length > 0)) d = subDays(d, 1);
+    while (true) {
+      const str = format(d, 'yyyy-MM-dd');
+      if (!workDays.find(w => w.date === str && w.totalWorkMinutes > 0)) break;
+      s++;
+      d = subDays(d, 1);
+    }
+    return s;
+  }, [workDays]);
+
+  const todayHours = today.totalWorkMinutes / 60;
 
   // ── session timer ──────────────────────────────────────────────────────────
   const sessionDuration = useMemo(() => {
@@ -127,7 +144,11 @@ export default function App() {
         )}
 
         {/* Bell */}
-        <NotificationBell />
+        <NotificationBell
+          status={currentStatus}
+          todayHours={todayHours}
+          streak={streak}
+        />
       </header>
 
       {/* ── Main content ── */}

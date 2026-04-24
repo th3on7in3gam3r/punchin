@@ -1,60 +1,92 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Bell } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react'; // project uses motion/react, not framer-motion
+import { motion, AnimatePresence } from 'motion/react'; // project uses motion/react
 
-interface Notification {
+export interface AppNotification {
   id: string;
   title: string;
   message: string;
   time: string;
   read: boolean;
-  type?: 'success' | 'info' | 'warning';
+  type: 'success' | 'info' | 'warning';
 }
 
-const typeColors = {
-  success: 'bg-emerald-50 border-l-4 border-emerald-400',
-  info:    'bg-blue-50 border-l-4 border-blue-400',
-  warning: 'bg-amber-50 border-l-4 border-amber-400',
-};
+interface NotificationBellProps {
+  status: 'clocked_in' | 'on_break' | 'clocked_out';
+  todayHours: number;
+  streak: number;
+}
 
-const DEFAULT_NOTIFICATIONS: Notification[] = [
-  {
-    id: '1',
-    title: 'Great Work Today!',
-    message: "You completed 8 hours — your best day this week 🔥",
-    time: 'Just now',
-    read: false,
-    type: 'success',
-  },
-  {
-    id: '2',
-    title: 'Break Suggestion',
-    message: "You've been working for 3 hours straight. Consider taking a break soon.",
-    time: '1h ago',
-    read: false,
-    type: 'info',
-  },
-  {
-    id: '3',
-    title: 'Weekly Goal Progress',
-    message: "You're at 87% of your weekly goal. Keep it going!",
-    time: 'Yesterday',
-    read: true,
-    type: 'info',
-  },
-];
-
-export function NotificationBell() {
+export function NotificationBell({ status, todayHours, streak }: NotificationBellProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>(DEFAULT_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const lastBreakReminder = useRef<number>(Date.now());
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const markAsRead = (id: string) =>
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+  const addNotification = (notif: Omit<AppNotification, 'id' | 'time'>) => {
+    setNotifications(prev => {
+      // Deduplicate by title — don't re-add the same notification
+      if (prev.some(n => n.title === notif.title && !n.read)) return prev;
+      return [{ ...notif, id: Date.now().toString(), time: 'Just now' }, ...prev].slice(0, 12);
+    });
+  };
 
-  const markAllAsRead = () =>
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  // ── Real-time triggers ────────────────────────────────────────────────────
+  useEffect(() => {
+    // 1. Daily goal reached (8h window: 8.0–8.5 to avoid re-firing)
+    if (todayHours >= 8 && todayHours < 8.5) {
+      addNotification({
+        title: '🎉 Daily Goal Reached!',
+        message: `You've worked ${todayHours.toFixed(1)} hours today. Amazing!`,
+        read: false,
+        type: 'success',
+      });
+    }
+
+    // 2. Break reminder — every 2h while clocked in
+    if (status === 'clocked_in') {
+      const now = Date.now();
+      if (now - lastBreakReminder.current > 2 * 60 * 60 * 1000) {
+        addNotification({
+          title: '⏰ Break Time',
+          message: "You've been focused for over 2 hours. Time for a quick break?",
+          read: false,
+          type: 'warning',
+        });
+        lastBreakReminder.current = now;
+      }
+    }
+
+    // 3. Shift completed
+    if (status === 'clocked_out' && todayHours >= 4) {
+      addNotification({
+        title: '✅ Shift Completed',
+        message: `Great job today! You worked ${todayHours.toFixed(1)} hours.`,
+        read: false,
+        type: 'success',
+      });
+    }
+
+    // 4. Streak milestones (every 3 days)
+    if (streak >= 3 && streak % 3 === 0) {
+      addNotification({
+        title: '🔥 Streak Milestone',
+        message: `You're on a ${streak}-day streak! Keep the momentum going!`,
+        read: false,
+        type: 'success',
+      });
+    }
+  }, [status, todayHours, streak]);
+
+  const markAsRead    = (id: string) => setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+  const markAllAsRead = ()           => setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+
+  const typeAccent: Record<AppNotification['type'], string> = {
+    success: 'border-l-2 border-emerald-400',
+    info:    'border-l-2 border-blue-400',
+    warning: 'border-l-2 border-amber-400',
+  };
 
   return (
     <div className="relative">
@@ -87,42 +119,43 @@ export function NotificationBell() {
               <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
                 <p className="text-xs font-black text-slate-700 uppercase tracking-widest">Notifications</p>
                 {unreadCount > 0 && (
-                  <button
-                    onClick={markAllAsRead}
-                    className="text-[10px] font-black text-blue-600 uppercase tracking-widest hover:text-blue-800"
-                  >
+                  <button onClick={markAllAsRead} className="text-[10px] font-black text-blue-600 uppercase tracking-widest hover:text-blue-800">
                     Mark all read
                   </button>
                 )}
               </div>
 
               {/* List */}
-              <div className="max-h-[380px] overflow-y-auto divide-y divide-slate-50">
-                {notifications.map(n => (
-                  <div
-                    key={n.id}
-                    onClick={() => markAsRead(n.id)}
-                    className={`px-4 py-3 cursor-pointer hover:bg-slate-50 transition-colors ${!n.read ? 'bg-blue-50/60' : ''}`}
-                  >
-                    <div className="flex justify-between items-start gap-2">
-                      <p className={`text-xs font-black leading-tight ${!n.read ? 'text-slate-800' : 'text-slate-500'}`}>
-                        {n.title}
-                      </p>
-                      <span className="text-[9px] text-slate-400 whitespace-nowrap font-bold uppercase tracking-wider shrink-0">
-                        {n.time}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">{n.message}</p>
+              <div className="max-h-[400px] overflow-y-auto divide-y divide-slate-50">
+                {notifications.length === 0 ? (
+                  <div className="py-12 text-center">
+                    <Bell size={28} className="mx-auto text-slate-200 mb-3" />
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">No notifications yet</p>
                   </div>
-                ))}
+                ) : (
+                  notifications.map(n => (
+                    <div
+                      key={n.id}
+                      onClick={() => markAsRead(n.id)}
+                      className={`px-4 py-3 cursor-pointer hover:bg-slate-50 transition-colors ${!n.read ? 'bg-blue-50/60' : ''} ${typeAccent[n.type]}`}
+                    >
+                      <div className="flex justify-between items-start gap-2">
+                        <p className={`text-xs font-black leading-tight ${!n.read ? 'text-slate-800' : 'text-slate-500'}`}>
+                          {n.title}
+                        </p>
+                        <span className="text-[9px] text-slate-400 whitespace-nowrap font-bold uppercase tracking-wider shrink-0">
+                          {n.time}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">{n.message}</p>
+                    </div>
+                  ))
+                )}
               </div>
 
               {/* Footer */}
               <div className="px-4 py-2.5 border-t border-slate-100 text-center">
-                <button
-                  onClick={() => setIsOpen(false)}
-                  className="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-600"
-                >
+                <button onClick={() => setIsOpen(false)} className="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-600">
                   Dismiss
                 </button>
               </div>
