@@ -5,6 +5,11 @@ import BreakJourneyAnimation from '../BreakJourneyAnimation';
 import { Card } from '../common/Card';
 import { Button3D } from '../common/Button3D';
 import { cn } from '../../lib/utils';
+import {
+  getBreakTiming,
+  formatBreakRemainingLabel,
+  formatBreakEndTime,
+} from '../../lib/breakTiming';
 import type { HomeSession } from './useHomeSession';
 
 type Props = HomeSession & {
@@ -163,18 +168,17 @@ export function HomeActionArea({
 
   if (!hasEndedBreak) {
     const breakStart = currentSessionLogs.find(l => l.type === 'break_start')?.timestamp ?? 0;
-    const elapsedMins = (currentTime.getTime() - breakStart) / 60000;
-    const elapsedFraction = Math.min(1, elapsedMins / breakDuration);
-    const elapsed = currentTime.getTime() - breakStart;
-    const totalMs = Math.max(0, breakDuration * 60000 - elapsed);
-    const remMins = Math.floor(totalMs / 60000);
-    const remSecs = Math.floor((totalMs % 60000) / 1000);
-    const breakDone = totalMs <= 0;
+    const timing = getBreakTiming(breakStart, breakDuration, currentTime.getTime());
+    const { elapsedFraction, remainingFraction, breakDone, remMins, remSecs, breakEndMs } =
+      timing;
+    const remainingLabel = formatBreakRemainingLabel(remMins, remSecs);
+    const endsAt = formatBreakEndTime(breakEndMs);
+    const usedMins = Math.floor(timing.elapsedMins);
 
     return (
       <div className="w-full space-y-4">
         <div className="flex items-center justify-center">
-          <div className="flex items-center gap-2 px-4 py-1.5 bg-orange-100 border border-orange-200 rounded-full">
+          <div className="flex items-center gap-2 px-4 py-1.5 bg-orange-100 dark:bg-orange-900/40 border border-orange-200 dark:border-orange-800 rounded-full">
             <div className="w-2 h-2 bg-orange-500 rounded-full animate-ping" />
             <span className="text-xs font-black text-orange-600 uppercase tracking-widest">
               On Break
@@ -189,28 +193,30 @@ export function HomeActionArea({
               character={breakCharacter}
               destination={breakDestination}
             />
-            <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm px-4 py-3 flex items-center justify-between border-t border-orange-100">
-              <div>
-                <p className="text-[9px] font-black text-orange-400 uppercase tracking-widest">
-                  Break time remaining
+            <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm px-4 py-3 space-y-2 border-t border-orange-100 dark:border-orange-900">
+              {breakDone ? (
+                <p className="text-lg font-black text-emerald-500 tracking-tight text-center">
+                  Break complete — resume when ready
                 </p>
-                {breakDone ? (
-                  <p className="text-lg font-black text-emerald-500 tracking-tight">Break complete!</p>
-                ) : (
-                  <p className="text-2xl font-black text-slate-800 dark:text-white tabular-nums tracking-tighter">
-                    {remMins.toString().padStart(2, '0')}
-                    <span className="text-orange-400 mx-0.5">:</span>
-                    {remSecs.toString().padStart(2, '0')}
-                  </p>
-                )}
-              </div>
-              <div className="w-24 h-2 bg-orange-100 rounded-full overflow-hidden">
-                <motion.div
-                  animate={{ width: `${elapsedFraction * 100}%` }}
-                  className="h-full bg-orange-400 rounded-full"
-                  transition={{ duration: 0.5 }}
-                />
-              </div>
+              ) : (
+                <>
+                  <div>
+                    <p className="text-lg font-black text-slate-800 dark:text-white leading-tight">
+                      {remainingLabel}
+                    </p>
+                    <p className="text-[10px] font-bold text-slate-400 mt-0.5">
+                      Ends at {endsAt} · {usedMins}m of {breakDuration}m used
+                    </p>
+                  </div>
+                  <div className="w-full h-2 bg-orange-100 dark:bg-orange-950 rounded-full overflow-hidden">
+                    <motion.div
+                      animate={{ width: `${remainingFraction * 100}%` }}
+                      className="h-full bg-orange-400 rounded-full"
+                      transition={{ duration: 0.5 }}
+                    />
+                  </div>
+                </>
+              )}
             </div>
           </div>
         ) : (
@@ -226,39 +232,45 @@ export function HomeActionArea({
               {breakDone ? (
                 <p className="text-3xl font-black tracking-tighter text-emerald-400">Break complete!</p>
               ) : (
-                <div className="flex items-baseline gap-2">
-                  <p className="text-5xl font-black tracking-tighter tabular-nums">
-                    {remMins.toString().padStart(2, '0')}
-                    <span className="text-blue-500 opacity-80 mx-1">:</span>
-                    {remSecs.toString().padStart(2, '0')}
+                <div className="space-y-1">
+                  <p className="text-3xl font-black tracking-tighter text-white">{remainingLabel}</p>
+                  <p className="text-xs font-bold text-slate-400">
+                    Ends at {endsAt} · timer at top of screen
                   </p>
-                  <p className="text-sm font-black text-slate-500 uppercase tracking-widest">left</p>
                 </div>
               )}
               <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
                 <motion.div
-                  animate={{ width: `${elapsedFraction * 100}%` }}
+                  animate={{ width: `${remainingFraction * 100}%` }}
                   className="h-full bg-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.8)]"
+                  transition={{ duration: 0.5 }}
                 />
               </div>
             </div>
           </Card>
         )}
-        <div className="flex gap-2">
-          {([15, 30, 60] as const).map(d => (
-            <button
-              key={d}
-              onClick={() => setBreakDuration(d)}
-              className={cn(
-                'flex-1 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all',
-                breakDuration === d
-                  ? 'bg-blue-600 text-white border-blue-600 shadow-xl'
-                  : 'bg-white/80 border-slate-200 text-slate-500 hover:border-blue-300',
-              )}
-            >
-              {d}m
-            </button>
-          ))}
+        <div className="space-y-1.5">
+          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">
+            Default for next break
+          </p>
+          <div className="flex gap-2">
+            {([15, 30, 60] as const).map(d => (
+              <button
+                key={d}
+                type="button"
+                disabled
+                title="Finish or resume this break first — duration applies to your next break"
+                className={cn(
+                  'flex-1 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all cursor-not-allowed opacity-50',
+                  breakDuration === d
+                    ? 'bg-blue-600/80 text-white border-blue-600'
+                    : 'bg-white/80 dark:bg-slate-800 border-slate-200 dark:border-slate-600 text-slate-400',
+                )}
+              >
+                {d}m
+              </button>
+            ))}
+          </div>
         </div>
         <motion.div whileTap={{ scale: 0.97 }}>
           <Button3D color="blue" onClick={() => onAction('break_end')} className="w-full py-10">

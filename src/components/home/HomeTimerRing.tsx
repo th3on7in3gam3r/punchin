@@ -2,6 +2,10 @@ import { format } from 'date-fns';
 import { motion } from 'motion/react';
 import { CircleDot, DollarSign } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import {
+  getBreakTiming,
+  formatBreakRemainingLabel,
+} from '../../lib/breakTiming';
 import type { HomeSession } from './useHomeSession';
 
 type Props = Pick<
@@ -38,18 +42,16 @@ export function HomeTimerRing({
   let mainDisplay = format(currentTime, 'hh:mm');
   let subDisplay = format(currentTime, 'ss');
   let label = 'Current Time';
+  let breakSubtitle: string | null = null;
 
   if (currentStatus === 'on_break') {
     const breakStart = currentSessionLogs.find(l => l.type === 'break_start')?.timestamp ?? 0;
-    const elapsed = currentTime.getTime() - breakStart;
-    const total = breakDuration * 60000;
-    const remaining = Math.max(0, total - elapsed);
-    const mins = Math.floor(remaining / 60000);
-    const secs = Math.floor((remaining % 60000) / 1000);
-    mainDisplay = mins.toString().padStart(2, '0');
-    subDisplay = secs.toString().padStart(2, '0');
-    progress = Math.min(1, elapsed / total);
+    const timing = getBreakTiming(breakStart, breakDuration, currentTime.getTime());
+    mainDisplay = timing.remMins.toString().padStart(2, '0');
+    subDisplay = timing.remSecs.toString().padStart(2, '0');
+    progress = timing.remainingFraction;
     label = 'Break Remaining';
+    breakSubtitle = formatBreakRemainingLabel(timing.remMins, timing.remSecs);
   } else if (currentStatus === 'clocked_in') {
     const h = Math.floor(currentWorkMins / 60);
     const m = Math.floor(currentWorkMins % 60);
@@ -130,7 +132,12 @@ export function HomeTimerRing({
         <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-2">
           {label}
         </p>
-        {currentStatus !== 'clocked_out' && (
+        {breakSubtitle && (
+          <p className="text-sm font-bold text-orange-500 dark:text-orange-400 mt-1 tabular-nums">
+            {breakSubtitle}
+          </p>
+        )}
+        {currentStatus !== 'clocked_out' && currentStatus !== 'on_break' && (
           <div className="flex items-center gap-1 text-emerald-500 mt-1">
             <CircleDot size={8} fill="currentColor" />
             <span className="text-[8px] font-black uppercase tracking-wider">Live</span>
