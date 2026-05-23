@@ -10,17 +10,14 @@ import { Card } from './common/Card';
 import { Button3D } from './common/Button3D';
 import { cn } from '../lib/utils';
 import { ManualEntryModal } from './ManualEntryModal';
+import { recalculateDay } from '../lib/workDayStats';
+import { syncPunchToServer, deletePunchFromServer } from '../lib/punchApi';
+import { usePunchIn } from '../contexts/PunchInContext';
 
 const PAGE_SIZE = 10; // entries (days) shown per page
 
-export const EntriesView = ({
-  workDays, setWorkDays, formatMinutes, workLocations
-}: {
-  workDays: WorkDay[];
-  setWorkDays: React.Dispatch<React.SetStateAction<WorkDay[]>>;
-  formatMinutes: (mins: number) => string;
-  workLocations: WorkLocation[];
-}) => {
+export const EntriesView = () => {
+  const { workDays, setWorkDays, formatMinutes, workLocations } = usePunchIn();
   const [searchQuery, setSearchQuery]           = useState('');
   const [selectedLocationId, setSelectedLocationId] = useState<string>('all');
   const [expandedDays, setExpandedDays]         = useState<string[]>([]);
@@ -36,29 +33,24 @@ export const EntriesView = ({
   const getLocationName = (id?: string) =>
     id ? workLocations.find(l => l.id === id)?.name ?? null : null;
 
-  const recalculateDay = (day: WorkDay, updatedLogs: TimeLog[]): WorkDay => {
-    let workMins = 0, breakMins = 0;
-    let lastIn: number | null = null, lastBreak: number | null = null;
-    updatedLogs.forEach(log => {
-      if (log.type === 'clock_in')    { lastIn = log.timestamp; }
-      if (log.type === 'break_start') { if (lastIn) workMins += (log.timestamp - lastIn) / 60000; lastBreak = log.timestamp; lastIn = null; }
-      if (log.type === 'break_end')   { if (lastBreak) breakMins += (log.timestamp - lastBreak) / 60000; lastIn = log.timestamp; lastBreak = null; }
-      if (log.type === 'clock_out')   { if (lastIn) workMins += (log.timestamp - lastIn) / 60000; lastIn = null; }
-    });
-    return { ...day, logs: updatedLogs, totalWorkMinutes: workMins, totalBreakMinutes: breakMins };
-  };
-
   const handleUpdateLog = (dayId: string, logId: string, updates: Partial<TimeLog>) =>
     setWorkDays(prev => prev.map(day => {
       if (day.id !== dayId) return day;
       return recalculateDay(day, day.logs.map(l => l.id === logId ? { ...l, ...updates } : l));
     }));
 
-  const handleRemoveLog = (dayId: string, logId: string) =>
-    setWorkDays(prev => prev.map(day => {
-      if (day.id !== dayId) return day;
-      return recalculateDay(day, day.logs.filter(l => l.id !== logId));
-    }));
+  const handleRemoveLog = (dayId: string, logId: string) => {
+    deletePunchFromServer(logId).catch(console.error);
+    setWorkDays(prev =>
+      prev.map(day => {
+        if (day.id !== dayId) return day;
+        return recalculateDay(
+          day,
+          day.logs.filter(l => l.id !== logId),
+        );
+      }),
+    );
+  };
 
   const handleAddLog = (dayId: string, type: TimeLog['type']) => {
     const day = workDays.find(d => d.id === dayId);
@@ -68,10 +60,7 @@ export const EntriesView = ({
       timestamp: parseISO(day.date).getTime() + 9 * 3600000,
       locationId: workLocations[0]?.id
     };
-    fetch('/api/punch', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: type, locationId: newLog.locationId, timestamp: newLog.timestamp, date: day.date })
-    }).catch(console.error);
+    syncPunchToServer(newLog, day.date).catch(console.error);
     setWorkDays(prev => prev.map(d => {
       if (d.id !== dayId) return d;
       return recalculateDay(d, [...d.logs, newLog].sort((a, b) => a.timestamp - b.timestamp));

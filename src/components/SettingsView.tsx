@@ -1,63 +1,43 @@
 import React, { useState } from 'react';
-import { Bell, User, Clock, Trash2, Pause, Check, Plus, MapPin, X, Volume2, DollarSign, Percent } from 'lucide-react';
+import { Bell, User, Clock, Trash2, Pause, Check, Plus, MapPin, X, Volume2, DollarSign, Percent, Moon, Sun, Monitor } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { View, WorkLocation, UserProfile, CharacterType, DestinationType } from '../types';
+import { View, WorkLocation, Theme } from '../types';
 import { Card } from './common/Card';
 import { Button3D } from './common/Button3D';
 import { cn } from '../lib/utils';
 import { SOUNDS } from '../constants';
+import { usePunchIn } from '../contexts/PunchInContext';
 
-export const SettingsView = ({ 
-  setView, 
-  clearAllData, 
-  breakDuration, 
-  setBreakDuration,
-  workLocations,
-  setWorkLocations,
-  userProfile,
-  setUserProfile,
-  hourlyRate,
-  setHourlyRate,
-  workDaysOfWeek,
-  setWorkDaysOfWeek,
-  defaultWorkStart,
-  setDefaultWorkStart,
-  defaultWorkEnd,
-  setDefaultWorkEnd,
-  defaultReminderSound,
-  setDefaultReminderSound,
-  showBreakAnimation,
-  setShowBreakAnimation,
-  breakCharacter,
-  setBreakCharacter,
-  breakDestination,
-  setBreakDestination,
-}: {
-  setView: (view: View) => void;
-  clearAllData: () => void;
-  breakDuration: 15 | 30 | 60;
-  setBreakDuration: (val: 15 | 30 | 60) => void;
-  workLocations: WorkLocation[];
-  setWorkLocations: (locations: WorkLocation[]) => void;
-  userProfile: UserProfile;
-  setUserProfile: (profile: UserProfile) => void;
-  hourlyRate: number;
-  setHourlyRate: (rate: number) => void;
-  workDaysOfWeek: number[];
-  setWorkDaysOfWeek: (days: number[]) => void;
-  defaultWorkStart: string;
-  setDefaultWorkStart: (val: string) => void;
-  defaultWorkEnd: string;
-  setDefaultWorkEnd: (val: string) => void;
-  defaultReminderSound: string;
-  setDefaultReminderSound: (val: string) => void;
-  showBreakAnimation: boolean;
-  setShowBreakAnimation: (val: boolean) => void;
-  breakCharacter: CharacterType;
-  setBreakCharacter: (val: CharacterType) => void;
-  breakDestination: DestinationType;
-  setBreakDestination: (val: DestinationType) => void;
-}) => {
+export const SettingsView = ({ setView }: { setView: (view: View) => void }) => {
+  const {
+    clearAllData,
+    breakDuration,
+    setBreakDuration,
+    workLocations,
+    setWorkLocations,
+    userProfile,
+    setUserProfile,
+    hourlyRate,
+    setHourlyRate,
+    workDaysOfWeek,
+    setWorkDaysOfWeek,
+    defaultWorkStart,
+    setDefaultWorkStart,
+    defaultWorkEnd,
+    setDefaultWorkEnd,
+    defaultReminderSound,
+    setDefaultReminderSound,
+    showBreakAnimation,
+    setShowBreakAnimation,
+    breakCharacter,
+    setBreakCharacter,
+    breakDestination,
+    setBreakDestination,
+    theme,
+    setTheme,
+    notificationsEnabled,
+    setNotificationsEnabled,
+  } = usePunchIn();
   const [showConfirm, setShowConfirm] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -150,11 +130,61 @@ export const SettingsView = ({
     setIsEditingSchedule(false);
   };
 
+  const themeOptions: { id: Theme; label: string; icon: React.ReactNode }[] = [
+    { id: 'light', label: 'Light', icon: <Sun size={16} /> },
+    { id: 'dark', label: 'Dark', icon: <Moon size={16} /> },
+    { id: 'system', label: 'System', icon: <Monitor size={16} /> },
+  ];
+
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-slate-800">Settings</h2>
+      <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Settings</h2>
       
       <div className="space-y-4">
+        <Card className="p-6 space-y-4">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-violet-100 dark:bg-violet-900/40 rounded-lg text-violet-600">
+              <Monitor size={20} />
+            </div>
+            <p className="font-bold text-slate-700 dark:text-slate-200">Appearance</p>
+          </div>
+          <div className="flex gap-2">
+            {themeOptions.map(opt => (
+              <button
+                key={opt.id}
+                onClick={() => setTheme(opt.id)}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all',
+                  theme === opt.id
+                    ? 'bg-violet-600 border-violet-600 text-white shadow-lg'
+                    : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-600 text-slate-500',
+                )}
+              >
+                {opt.icon}
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-700">
+            <div>
+              <p className="text-sm font-bold text-slate-700 dark:text-slate-200">Reminder alerts</p>
+              <p className="text-[10px] text-slate-400">Sounds and on-screen notifications</p>
+            </div>
+            <button
+              onClick={() => setNotificationsEnabled(!notificationsEnabled)}
+              className={cn(
+                'w-12 h-7 rounded-full transition-colors relative',
+                notificationsEnabled ? 'bg-violet-500' : 'bg-slate-200 dark:bg-slate-600',
+              )}
+            >
+              <motion.div
+                animate={{ x: notificationsEnabled ? 22 : 2 }}
+                className="absolute top-1 w-5 h-5 bg-white rounded-full shadow"
+              />
+            </button>
+          </div>
+        </Card>
+
         {/* Work Locations Section */}
         <Card className="p-6 space-y-4">
           <div className="flex items-center justify-between mb-2">
@@ -604,8 +634,8 @@ export const SettingsView = ({
               <div className="flex flex-col gap-3">
                 <Button3D 
                   color="red" 
-                  onClick={() => {
-                    clearAllData();
+                  onClick={async () => {
+                    await clearAllData();
                     setShowConfirm(false);
                   }}
                 >

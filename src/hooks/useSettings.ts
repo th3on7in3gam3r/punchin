@@ -1,54 +1,44 @@
-import { useState, useEffect } from 'react';
-import { CharacterType, DestinationType } from '../types';
-
-// Fields that live HERE (not in useWorkTracker)
-export interface LocalSettings {
-  showBreakAnimation: boolean;
-  dailyGoalHours: number;
-  theme: 'light' | 'dark' | 'system';
-  notificationsEnabled: boolean;
-}
-
-const DEFAULTS: LocalSettings = {
-  showBreakAnimation: true,
-  dailyGoalHours: 8,
-  theme: 'system',
-  notificationsEnabled: true,
-};
+import {
+  usePersistedState,
+  booleanSerializer,
+  numberSerializer,
+  stringSerializer,
+} from './usePersistedState';
+import type { Theme } from '../types';
 
 export function useSettings() {
-  const [showBreakAnimation, setShowBreakAnimation] = useState<boolean>(() => {
-    const s = localStorage.getItem('punchin_break_animation');
-    return s === null ? true : s === 'true';
-  });
+  const [showBreakAnimation, setShowBreakAnimation] = usePersistedState(
+    'punchin_break_animation',
+    true,
+    booleanSerializer,
+  );
 
-  const [dailyGoalHours, setDailyGoalHours] = useState<number>(() => {
-    const s = localStorage.getItem('punchin_daily_goal_hours');
-    return s ? parseFloat(s) : 8;
-  });
+  const [dailyGoalHours, setDailyGoalHours] = usePersistedState(
+    'punchin_daily_goal_hours',
+    8,
+    numberSerializer,
+  );
 
-  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>(() => {
-    return (localStorage.getItem('punchin_theme') as LocalSettings['theme']) || 'system';
-  });
+  const [theme, setTheme] = usePersistedState<Theme>(
+    'punchin_theme',
+    'system',
+    stringSerializer as { read: (raw: string) => Theme; write: (v: Theme) => string },
+  );
 
-  const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(() => {
-    const s = localStorage.getItem('punchin_notifications_enabled');
-    return s === null ? true : s === 'true';
-  });
-
-  // Persist
-  useEffect(() => { localStorage.setItem('punchin_break_animation', String(showBreakAnimation)); }, [showBreakAnimation]);
-  useEffect(() => { localStorage.setItem('punchin_daily_goal_hours', String(dailyGoalHours)); }, [dailyGoalHours]);
-  useEffect(() => { localStorage.setItem('punchin_theme', theme); }, [theme]);
-  useEffect(() => { localStorage.setItem('punchin_notifications_enabled', String(notificationsEnabled)); }, [notificationsEnabled]);
+  const [notificationsEnabled, setNotificationsEnabled] = usePersistedState(
+    'punchin_notifications_enabled',
+    true,
+    booleanSerializer,
+  );
 
   return {
-    showBreakAnimation, setShowBreakAnimation,
-    dailyGoalHours,     setDailyGoalHours,
-    theme,              setTheme,
-    notificationsEnabled, setNotificationsEnabled,
+    showBreakAnimation,
+    setShowBreakAnimation,
+    dailyGoalHours,
+    setDailyGoalHours,
+    theme,
+    setTheme,
+    notificationsEnabled,
+    setNotificationsEnabled,
   };
 }
-
-// Re-export types for convenience
-export type { CharacterType, DestinationType };

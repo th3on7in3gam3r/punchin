@@ -15,22 +15,17 @@ import { cn } from '../lib/utils';
 import { WorkDay, WorkLocation } from '../types';
 import { Card } from './common/Card';
 import { motion, AnimatePresence } from 'motion/react';
+import { usePunchIn } from '../contexts/PunchInContext';
 
-export const CalendarView = ({ 
-  workDays, 
-  formatMinutes, 
-  workLocations,
-  defaultWorkStart,
-  defaultWorkEnd,
-  breakDuration
-}: { 
-  workDays: WorkDay[];
-  formatMinutes: (mins: number) => string;
-  workLocations: WorkLocation[];
-  defaultWorkStart: string;
-  defaultWorkEnd: string;
-  breakDuration: number;
-}) => {
+export const CalendarView = () => {
+  const {
+    workDays,
+    formatMinutes,
+    workLocations,
+    defaultWorkStart,
+    defaultWorkEnd,
+    breakDuration,
+  } = usePunchIn();
   const expectedDailyMins = useMemo(() => {
     const [startH, startM] = defaultWorkStart.split(':').map(Number);
     const [endH, endM] = defaultWorkEnd.split(':').map(Number);

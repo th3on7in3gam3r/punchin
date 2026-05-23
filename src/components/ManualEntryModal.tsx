@@ -6,6 +6,8 @@ import { WorkDay, WorkLocation, TimeLog } from '../types';
 import { Card } from './common/Card';
 import { Button3D } from './common/Button3D';
 import { cn } from '../lib/utils';
+import { recalculateDay } from '../lib/workDayStats';
+import { syncPunchToServer } from '../lib/punchApi';
 
 interface ManualEntryModalProps {
   isOpen: boolean;
@@ -22,38 +24,6 @@ export const ManualEntryModal = ({ isOpen, onClose, workLocations, setWorkDays }
   const [breakStart, setBreakStart] = useState('12:00');
   const [breakEnd, setBreakEnd] = useState('12:30');
   const [includeBreak, setIncludeBreak] = useState(false);
-
-  const recalculateDay = (day: WorkDay, updatedLogs: TimeLog[]): WorkDay => {
-    let workMins = 0;
-    let breakMins = 0;
-    let lastIn: number | null = null;
-    let lastBreak: number | null = null;
-
-    updatedLogs.forEach(log => {
-      if (log.type === 'clock_in') lastIn = log.timestamp;
-      if (log.type === 'break_start') {
-        if (lastIn) workMins += (log.timestamp - lastIn) / 60000;
-        lastBreak = log.timestamp;
-        lastIn = null;
-      }
-      if (log.type === 'break_end') {
-        if (lastBreak) breakMins += (log.timestamp - lastBreak) / 60000;
-        lastIn = log.timestamp;
-        lastBreak = null;
-      }
-      if (log.type === 'clock_out') {
-        if (lastIn) workMins += (log.timestamp - lastIn) / 60000;
-        lastIn = null;
-      }
-    });
-
-    return {
-      ...day,
-      logs: updatedLogs,
-      totalWorkMinutes: workMins,
-      totalBreakMinutes: breakMins
-    };
-  };
 
   const handleManualAdd = () => {
     if (!newEntryDate || !newEntryLocation || !clockInTime || !clockOutTime) return;
@@ -91,18 +61,8 @@ export const ManualEntryModal = ({ isOpen, onClose, workLocations, setWorkDays }
       }
 
       // Sync each new log to database
-      Promise.all(logs.map(log => 
-        fetch('/api/punch', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            action: log.type, 
-            locationId: log.locationId,
-            timestamp: log.timestamp, 
-            date: newEntryDate
-          })
-        })
-      )).catch(err => console.error("Manual sync failed:", err));
+      Promise.all(logs.map(log => syncPunchToServer(log, newEntryDate)))
+        .catch(err => console.error('Manual sync failed:', err));
 
       return newWorkDays;
     });

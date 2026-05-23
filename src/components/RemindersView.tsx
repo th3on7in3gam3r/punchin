@@ -6,13 +6,10 @@ import { Reminder, View } from '../types';
 import { Card } from './common/Card';
 import { Button3D } from './common/Button3D';
 import { SOUNDS } from '../constants';
+import { usePunchIn } from '../contexts/PunchInContext';
 
-export const RemindersView = ({ reminders, setReminders, setView, defaultReminderSound }: {
-  reminders: Reminder[];
-  setReminders: (reminders: Reminder[]) => void;
-  setView: (view: View) => void;
-  defaultReminderSound: string;
-}) => {
+export const RemindersView = ({ setView }: { setView: (view: View) => void }) => {
+  const { reminders, setReminders, defaultReminderSound } = usePunchIn();
   const [isAdding, setIsAdding] = useState(false);
   const [editingReminderId, setEditingReminderId] = useState<string | null>(null);
   const [newReminder, setNewReminder] = useState<Partial<Reminder>>({

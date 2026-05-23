@@ -25,16 +25,6 @@ app.use(express.static(distPath));
 // Create tables if they don't exist (safe to run every time)
 async function ensureTables() {
   await sql`
-    CREATE TABLE IF NOT EXISTS work_days (
-      id TEXT PRIMARY KEY,
-      date TEXT NOT NULL UNIQUE,
-      total_work_minutes INTEGER DEFAULT 0,
-      total_break_minutes INTEGER DEFAULT 0,
-      created_at TIMESTAMP DEFAULT NOW()
-    );
-  `;
-
-  await sql`
     CREATE TABLE IF NOT EXISTS time_logs (
       id TEXT PRIMARY KEY,
       work_day_date TEXT NOT NULL,
@@ -88,6 +78,17 @@ app.post('/api/punch', async (req, res) => {
   }
 });
 
+// DELETE /api/punch/:id - Remove a single time log
+app.delete('/api/punch/:id', async (req, res) => {
+  try {
+    await sql`DELETE FROM time_logs WHERE id = ${req.params.id}`;
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete punch error:', error);
+    res.status(500).json({ error: error.message || 'Database error' });
+  }
+});
+
 // GET /api/punch - Get all time logs
 app.get('/api/punch', async (req, res) => {
   try {
@@ -99,6 +100,18 @@ app.get('/api/punch', async (req, res) => {
     res.json({ logs });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// DELETE /api/data - Clear all punch logs and settings
+app.delete('/api/data', async (req, res) => {
+  try {
+    await sql`DELETE FROM time_logs`;
+    await sql`DELETE FROM app_settings`;
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Clear data error:', error);
+    res.status(500).json({ error: error.message || 'Database error' });
   }
 });
 
@@ -132,6 +145,41 @@ app.post('/api/settings', async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message || String(error) });
+  }
+});
+
+// POST /api/insights - Gemini proxy (keeps API key server-side)
+app.post('/api/insights', async (req, res) => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return res.status(503).json({ error: 'GEMINI_API_KEY not configured' });
+  }
+  try {
+    const { context } = req.body || {};
+    const geminiRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: `You are a productivity coach. Based on this work data, give ONE concise, actionable insight (2-3 sentences max, friendly tone, include an emoji): ${context}`,
+            }],
+          }],
+        }),
+      },
+    );
+    if (!geminiRes.ok) {
+      const errText = await geminiRes.text();
+      return res.status(geminiRes.status).json({ error: errText || 'Gemini API error' });
+    }
+    const data = await geminiRes.json();
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    res.json({ text: text?.trim() || null });
+  } catch (error) {
+    console.error('Insights error:', error);
+    res.status(500).json({ error: error.message || 'Insights error' });
   }
 });
 

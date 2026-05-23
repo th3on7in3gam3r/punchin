@@ -125,6 +125,7 @@ export default function BreakJourneyAnimation({
       >
         {/* Body rock */}
         <motion.div
+          className="inline-block scale-x-[-1]"
           animate={isActive ? {
             rotate: isJogging ? [-14, 14] : [-7, 7],
           } : { rotate: 0 }}
@@ -138,10 +139,10 @@ export default function BreakJourneyAnimation({
           {characterEmojis[character]}
         </motion.div>
 
-        {/* Speed lines when jogging */}
+        {/* Speed lines when jogging (trail behind runner) */}
         {isJogging && isActive && (
           <motion.div
-            className="absolute top-1/2 -left-6 flex flex-col gap-1 -translate-y-1/2"
+            className="absolute top-1/2 -right-6 flex flex-col gap-1 -translate-y-1/2"
             animate={{ opacity: [0, 0.7, 0], x: [0, -6] }}
             transition={{ duration: 0.35, repeat: Infinity }}
           >

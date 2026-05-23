@@ -15,29 +15,21 @@ import {
 import { WorkDay, WorkLocation } from '../types';
 import { Card } from './common/Card';
 import { cn } from '../lib/utils';
+import { calcStreak, recalculateDay } from '../lib/workDayStats';
 import { motion, AnimatePresence } from 'motion/react';
+import { usePunchIn } from '../contexts/PunchInContext';
 
-// ─────────────────────────────────────────────────────────────────────────────
-
-export const ReportView = ({
-  workDays,
-  setWorkDays,
-  defaultWorkStart,
-  defaultWorkEnd,
-  breakDuration,
-  workLocations,
-  userProfile,
-  hourlyRate,
-}: {
-  workDays: WorkDay[];
-  setWorkDays: React.Dispatch<React.SetStateAction<WorkDay[]>>;
-  defaultWorkStart: string;
-  defaultWorkEnd: string;
-  breakDuration: number;
-  workLocations: WorkLocation[];
-  userProfile: { taxRate?: number };
-  hourlyRate: number;
-}) => {
+export const ReportView = () => {
+  const {
+    workDays,
+    setWorkDays,
+    defaultWorkStart,
+    defaultWorkEnd,
+    breakDuration,
+    workLocations,
+    userProfile,
+    hourlyRate,
+  } = usePunchIn();
   const [rangeType, setRangeType]     = useState<'weekly' | 'monthly' | 'custom'>('weekly');
   const [referenceDate, setReferenceDate] = useState(new Date());
   const [customStart, setCustomStart] = useState(format(subDays(new Date(), 30), 'yyyy-MM-dd'));
@@ -97,21 +89,7 @@ export const ReportView = ({
     });
   }, [workDays]);
 
-  // ── streak ───────────────────────────────────────────────────────────────────
-  const streak = useMemo(() => {
-    let s = 0;
-    let d = new Date();
-    // don't count today if no work yet
-    const todayStr = format(d, 'yyyy-MM-dd');
-    if (!workDays.find(w => w.date === todayStr && w.totalWorkMinutes > 0)) d = subDays(d, 1);
-    while (true) {
-      const str = format(d, 'yyyy-MM-dd');
-      if (!workDays.find(w => w.date === str && w.totalWorkMinutes > 0)) break;
-      s++;
-      d = subDays(d, 1);
-    }
-    return s;
-  }, [workDays]);
+  const streak = useMemo(() => calcStreak(workDays), [workDays]);
 
   // ── aggregate stats ──────────────────────────────────────────────────────────
   const stats = useMemo(() => {
@@ -190,18 +168,6 @@ export const ReportView = ({
   };
 
   // ── CSV upload (preserved from original) ─────────────────────────────────────
-  const recalculateDay = (day: WorkDay, logs: WorkDay['logs']): WorkDay => {
-    let workMins = 0, breakMins = 0;
-    let lastIn: number | null = null, lastBreak: number | null = null;
-    [...logs].sort((a, b) => a.timestamp - b.timestamp).forEach(log => {
-      if (log.type === 'clock_in')    { lastIn = log.timestamp; }
-      if (log.type === 'break_start') { if (lastIn) workMins += (log.timestamp - lastIn) / 60000; lastBreak = log.timestamp; lastIn = null; }
-      if (log.type === 'break_end')   { if (lastBreak) breakMins += (log.timestamp - lastBreak) / 60000; lastIn = log.timestamp; lastBreak = null; }
-      if (log.type === 'clock_out')   { if (lastIn) workMins += (log.timestamp - lastIn) / 60000; lastIn = null; }
-    });
-    return { ...day, logs, totalWorkMinutes: Math.round(workMins), totalBreakMinutes: Math.round(breakMins) };
-  };
-
   const handleUploadCsv = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -263,9 +229,6 @@ export const ReportView = ({
     setIsLoadingInsight(true);
     setAiInsight('');
 
-    const apiKey = process.env.GEMINI_API_KEY;
-
-    // Build a concise context string from real data
     const ctx = [
       `Period: ${rangeType}`,
       `Total hours: ${stats.totalHours.toFixed(1)}h`,
@@ -278,35 +241,22 @@ export const ReportView = ({
       stats.peakDay?.hours ? `Peak day: ${stats.peakDay.hours}h on ${stats.peakDay.fullDate}` : '',
     ].filter(Boolean).join('. ');
 
-    // Try real Gemini API first
-    if (apiKey) {
-      try {
-        const res = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{
-                parts: [{
-                  text: `You are a productivity coach. Based on this work data, give ONE concise, actionable insight (2-3 sentences max, friendly tone, include an emoji): ${ctx}`
-                }]
-              }]
-            })
-          }
-        );
-        if (res.ok) {
-          const data = await res.json();
-          const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (text) {
-            setAiInsight(text.trim());
-            setIsLoadingInsight(false);
-            return;
-          }
+    try {
+      const res = await fetch('/api/insights', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ context: ctx }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.text) {
+          setAiInsight(data.text);
+          setIsLoadingInsight(false);
+          return;
         }
-      } catch {
-        // fall through to placeholder
       }
+    } catch {
+      // fall through to placeholder
     }
 
     // Fallback: smart placeholder using real stats

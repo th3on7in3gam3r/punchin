@@ -6,6 +6,7 @@ import { Card } from './common/Card';
 import { Button3D } from './common/Button3D';
 import { MapPin, Calendar, HeartPulse, PartyPopper, HelpCircle, ArrowLeft } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { usePunchIn } from '../contexts/PunchInContext';
 
 const HOLIDAYS_2026 = [
   { date: '2026-05-25', name: 'Memorial Day' },
@@ -16,22 +17,12 @@ const HOLIDAYS_2026 = [
 ];
 
 interface WorkStatusModalProps {
-  workDaysOfWeek: number[];
-  dailyStatuses: DailyStatus[];
-  setDailyStatuses: React.Dispatch<React.SetStateAction<DailyStatus[]>>;
-  workLocations: WorkLocation[];
   onLocationSelect: (locationId: string) => void;
-  todayLogs: any[]; // Passing today.logs
 }
 
-export const WorkStatusModal = ({
-  workDaysOfWeek,
-  dailyStatuses,
-  setDailyStatuses,
-  workLocations,
-  onLocationSelect,
-  todayLogs
-}: WorkStatusModalProps) => {
+export const WorkStatusModal = ({ onLocationSelect }: WorkStatusModalProps) => {
+  const { workDaysOfWeek, dailyStatuses, setDailyStatuses, workLocations, today: todayWorkDay } = usePunchIn();
+  const todayLogs = todayWorkDay.logs;
   const [show, setShow] = useState(false);
   const [step, setStep] = useState<'working' | 'location' | 'reason'>('working');
   const [selectedReason, setSelectedReason] = useState<DailyStatus['reason'] | null>(null);
@@ -39,9 +30,9 @@ export const WorkStatusModal = ({
   const [holidayDate, setHolidayDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [holidayName, setHolidayName] = useState('');
   
-  const today = new Date();
-  const dateStr = format(today, 'yyyy-MM-dd');
-  const dayOfWeek = today.getDay();
+  const now = new Date();
+  const dateStr = format(now, 'yyyy-MM-dd');
+  const dayOfWeek = now.getDay();
   
   const holiday = HOLIDAYS_2026.find(h => h.date === dateStr);
   const isWorkDay = workDaysOfWeek.includes(dayOfWeek) || holiday;
