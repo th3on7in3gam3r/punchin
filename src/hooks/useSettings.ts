@@ -2,9 +2,14 @@ import {
   usePersistedState,
   booleanSerializer,
   numberSerializer,
-  stringSerializer,
 } from './usePersistedState';
 import type { Theme } from '../types';
+import { parseStoredTheme } from '../lib/theme';
+
+const themeSerializer = {
+  read: (raw: string): Theme => parseStoredTheme(raw),
+  write: (value: Theme) => value,
+};
 
 export function useSettings() {
   const [showBreakAnimation, setShowBreakAnimation] = usePersistedState(
@@ -22,7 +27,7 @@ export function useSettings() {
   const [theme, setTheme] = usePersistedState<Theme>(
     'punchin_theme',
     'system',
-    stringSerializer as { read: (raw: string) => Theme; write: (v: Theme) => string },
+    themeSerializer,
   );
 
   const [notificationsEnabled, setNotificationsEnabled] = usePersistedState(

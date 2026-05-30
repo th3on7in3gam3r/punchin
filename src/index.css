@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Class-based dark mode only — respects Settings (not OS when Light is chosen) */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @layer base {
   body {
     -webkit-font-smoothing: antialiased;

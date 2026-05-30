@@ -7,6 +7,7 @@ import { Button3D } from './common/Button3D';
 import { cn } from '../lib/utils';
 import { SOUNDS } from '../constants';
 import { usePunchIn } from '../contexts/PunchInContext';
+import { themeStatusLabel } from '../lib/theme';
 
 export const SettingsView = ({ setView }: { setView: (view: View) => void }) => {
   const {
@@ -146,7 +147,12 @@ export const SettingsView = ({ setView }: { setView: (view: View) => void }) => 
             <div className="p-2 bg-violet-100 dark:bg-violet-900/40 rounded-lg text-violet-600">
               <Monitor size={20} />
             </div>
-            <p className="font-bold text-slate-700 dark:text-slate-200">Appearance</p>
+            <div>
+              <p className="font-bold text-slate-700 dark:text-slate-200">Appearance</p>
+              <p className="text-[10px] text-slate-400 font-bold mt-0.5">
+                Active: {themeStatusLabel(theme)}
+              </p>
+            </div>
           </div>
           <div className="flex gap-2">
             {themeOptions.map(opt => (
