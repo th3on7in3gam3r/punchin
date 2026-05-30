@@ -8,8 +8,10 @@
         try {
           var t = localStorage.getItem('punchin_theme');
           var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-          var isDark = t === 'dark' || ((t === 'system' || !t) && prefersDark);
-          if (t === 'light') isDark = false;
+          var isDark = false;
+          if (t === 'dark') isDark = true;
+          else if (t === 'system') isDark = prefersDark;
+          else if (t === 'light') isDark = false;
           document.documentElement.classList.toggle('dark', isDark);
           document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
         } catch (e) {}

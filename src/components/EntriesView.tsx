@@ -33,11 +33,18 @@ export const EntriesView = () => {
   const getLocationName = (id?: string) =>
     id ? workLocations.find(l => l.id === id)?.name ?? null : null;
 
-  const handleUpdateLog = (dayId: string, logId: string, updates: Partial<TimeLog>) =>
-    setWorkDays(prev => prev.map(day => {
-      if (day.id !== dayId) return day;
-      return recalculateDay(day, day.logs.map(l => l.id === logId ? { ...l, ...updates } : l));
-    }));
+  const handleUpdateLog = (dayId: string, logId: string, updates: Partial<TimeLog>) => {
+    setWorkDays(prev =>
+      prev.map(day => {
+        if (day.id !== dayId) return day;
+        const logs = day.logs.map(l => (l.id === logId ? { ...l, ...updates } : l));
+        const updated = recalculateDay(day, logs);
+        const log = updated.logs.find(l => l.id === logId);
+        if (log) void syncPunchToServer(log, day.date);
+        return updated;
+      }),
+    );
+  };
 
   const handleRemoveLog = (dayId: string, logId: string) => {
     deletePunchFromServer(logId).catch(console.error);
@@ -67,24 +74,11 @@ export const EntriesView = () => {
     }));
   };
 
-  // Sync all logs for a day to the DB and show confirmation
   const handleSaveDay = async (dayId: string) => {
     const day = workDays.find(d => d.id === dayId);
     if (!day) return;
     try {
-      await Promise.all(day.logs.map(log =>
-        fetch('/api/punch', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            id: log.id,          // pass existing id → triggers ON CONFLICT UPDATE
-            action: log.type,
-            locationId: log.locationId,
-            timestamp: log.timestamp,
-            date: day.date,
-          }),
-        })
-      ));
+      await Promise.all(day.logs.map(log => syncPunchToServer(log, day.date)));
       setSavedDayId(dayId);
       setTimeout(() => setSavedDayId(null), 2500);
     } catch (err) {

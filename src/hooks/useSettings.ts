@@ -26,7 +26,7 @@ export function useSettings() {
 
   const [theme, setTheme] = usePersistedState<Theme>(
     'punchin_theme',
-    'system',
+    'light',
     themeSerializer,
   );
 

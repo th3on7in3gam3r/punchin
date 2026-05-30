@@ -18,7 +18,8 @@ import {
   workDaysFromDbLogs,
   statusFromLastLog,
 } from '../lib/workDayStats';
-import { syncPunchToServer } from '../lib/punchApi';
+import { queuePunchSync, clearPunchSyncQueue } from '../lib/punchSyncQueue';
+import { setSyncStatus } from '../lib/syncStatus';
 import { clearPunchinStorage } from '../lib/storageKeys';
 import {
   usePersistedState,
@@ -194,6 +195,7 @@ export function useWorkTracker(options: UseWorkTrackerOptions = {}) {
               if (lastLog) setCurrentStatus(statusFromLastLog(lastLog.type));
               return merged;
             });
+            setSyncStatus('synced', 0);
           }
         }
       } catch (error) {
@@ -271,11 +273,7 @@ export function useWorkTracker(options: UseWorkTrackerOptions = {}) {
 
     setCurrentStatus(statusFromLastLog(type));
 
-    try {
-      await syncPunchToServer(newLog, dateStr);
-    } catch (error) {
-      console.error('Database sync failed:', error);
-    }
+    void queuePunchSync(newLog, dateStr);
   }, [setWorkDays]);
 
   const today = useMemo(() => {
@@ -303,9 +301,11 @@ export function useWorkTracker(options: UseWorkTrackerOptions = {}) {
     setCurrentStatus('clocked_out');
     setActiveNotification(null);
     clearPunchinStorage();
+    clearPunchSyncQueue();
 
     try {
       await fetch('/api/data', { method: 'DELETE' });
+      setSyncStatus('synced', 0);
     } catch (error) {
       console.error('Server data clear failed:', error);
     }

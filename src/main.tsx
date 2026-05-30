@@ -3,6 +3,9 @@ import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 import { registerSW } from 'virtual:pwa-register';
+import { initPunchSyncQueue } from './lib/punchSyncQueue';
+
+initPunchSyncQueue();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

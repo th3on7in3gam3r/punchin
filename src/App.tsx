@@ -16,6 +16,7 @@ import { WorkStatusModal } from './components/WorkStatusModal';
 import { InstallBanner } from './components/InstallBanner';
 import { BottomNavigation } from './components/BottomNavigation';
 import { NotificationBell } from './components/NotificationBell';
+import { SyncIndicator } from './components/SyncIndicator';
 
 function AppShell() {
   const [view, setView] = useState<View>('home');
@@ -54,32 +55,41 @@ function AppShell() {
         onLocationSelect={setSelectedLocationId}
       />
 
-      <header className="sticky top-0 z-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 px-6 py-4 flex justify-between items-center">
-        <h1 className="text-xl font-black tracking-tighter text-blue-600 flex items-center gap-2">
-          <Clock className="fill-blue-600 text-white" size={24} />
-          PUNCHIN
-        </h1>
+      <header className="sticky top-0 z-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 px-4 py-3">
+        <div className="flex justify-between items-center gap-2">
+          <h1 className="text-lg font-black tracking-tighter text-blue-600 flex items-center gap-1.5 shrink-0">
+            <Clock className="fill-blue-600 text-white" size={22} />
+            PUNCHIN
+          </h1>
 
-        {sessionDuration !== null && (
-          <div className="flex flex-col items-center">
-            <div className="flex items-center gap-1.5">
-              <div
-                className={cn(
-                  'w-1.5 h-1.5 rounded-full',
-                  currentStatus === 'clocked_out' ? 'bg-slate-300' : 'bg-emerald-500 animate-pulse',
-                )}
-              />
-              <span className="text-xs font-black font-mono tracking-tighter text-slate-600 dark:text-slate-300">
-                {formatSessionTime(sessionDuration)}
-              </span>
+          {sessionDuration !== null ? (
+            <div className="flex flex-col items-center shrink-0">
+              <div className="flex items-center gap-1.5">
+                <div
+                  className={cn(
+                    'w-1.5 h-1.5 rounded-full',
+                    currentStatus === 'clocked_out' ? 'bg-slate-300' : 'bg-emerald-500 animate-pulse',
+                  )}
+                />
+                <span className="text-xs font-black font-mono tracking-tighter text-slate-600 dark:text-slate-300">
+                  {formatSessionTime(sessionDuration)}
+                </span>
+              </div>
+              <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">
+                Session
+              </p>
             </div>
-            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">
-              Session
-            </p>
+          ) : (
+            <SyncIndicator />
+          )}
+
+          <NotificationBell status={currentStatus} todayHours={todayHours} streak={streak} />
+        </div>
+        {sessionDuration !== null && (
+          <div className="flex justify-center mt-2">
+            <SyncIndicator />
           </div>
         )}
-
-        <NotificationBell status={currentStatus} todayHours={todayHours} streak={streak} />
       </header>
 
       <main className="max-w-md mx-auto px-6 py-6">

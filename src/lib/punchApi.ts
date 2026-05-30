@@ -1,19 +1,11 @@
 import { TimeLog } from '../types';
+import { queuePunchSync, queuePunchDelete } from './punchSyncQueue';
 
+/** @deprecated Use queuePunchSync — retries on failure */
 export function syncPunchToServer(log: TimeLog, date: string) {
-  return fetch('/api/punch', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      id: log.id,
-      action: log.type,
-      timestamp: log.timestamp,
-      date,
-      locationId: log.locationId,
-    }),
-  });
+  return queuePunchSync(log, date);
 }
 
 export function deletePunchFromServer(logId: string) {
-  return fetch(`/api/punch/${logId}`, { method: 'DELETE' });
+  return queuePunchDelete(logId);
 }

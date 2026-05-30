@@ -68,6 +68,8 @@ export function HomeTimerRing({
   const glowColor =
     currentStatus === 'on_break' ? 'rgba(249,115,22,0.3)' : 'rgba(59,130,246,0.3)';
 
+  const showLiveBadge = currentStatus === 'clocked_in';
+
   return (
     <div
       className={cn(
@@ -137,7 +139,7 @@ export function HomeTimerRing({
             {breakSubtitle}
           </p>
         )}
-        {currentStatus !== 'clocked_out' && currentStatus !== 'on_break' && (
+        {showLiveBadge && (
           <div className="flex items-center gap-1 text-emerald-500 mt-1">
             <CircleDot size={8} fill="currentColor" />
             <span className="text-[8px] font-black uppercase tracking-wider">Live</span>
