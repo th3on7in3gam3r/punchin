@@ -3,6 +3,30 @@ import { neon } from '@neondatabase/serverless';
 const DB_URL = process.env.NETLIFY_DATABASE_URL || process.env.DATABASE_URL;
 const sql = neon(DB_URL);
 
+function validateDayLogs(logs) {
+  if (!logs?.length) return { valid: true };
+  const sorted = [...logs].sort((a, b) => Number(a.timestamp) - Number(b.timestamp));
+  let state = 'out';
+  for (const log of sorted) {
+    const type = log.type;
+    if (type === 'clock_in') {
+      if (state === 'in' || state === 'break') return { valid: false, error: 'Cannot clock in while already on shift' };
+      state = 'in';
+    } else if (type === 'break_start') {
+      if (state !== 'in') return { valid: false, error: 'Break start requires an active shift' };
+      state = 'break';
+    } else if (type === 'break_end') {
+      if (state !== 'break') return { valid: false, error: 'Break end requires a break start' };
+      state = 'in';
+    } else if (type === 'clock_out') {
+      if (state === 'out') return { valid: false, error: 'Cannot clock out when not on shift' };
+      if (state === 'break') return { valid: false, error: 'End break before clocking out' };
+      state = 'out';
+    }
+  }
+  return { valid: true };
+}
+
 async function ensureTables() {
   await sql`
     CREATE TABLE IF NOT EXISTS time_logs (
@@ -28,6 +52,21 @@ export default async (req) => {
       const dateStr = body.date || now.toISOString().split('T')[0];
       const timestamp = body.timestamp || now.getTime();
       const logId = body.id || crypto.randomUUID();
+
+      const existing = await sql`
+        SELECT id, type, timestamp FROM time_logs WHERE work_day_date = ${dateStr}
+      `;
+      const merged = existing
+        .filter(row => row.id !== logId)
+        .map(row => ({ id: row.id, type: row.type, timestamp: row.timestamp }));
+      merged.push({ id: logId, type, timestamp });
+      const check = validateDayLogs(merged);
+      if (!check.valid) {
+        return new Response(JSON.stringify({ error: check.error }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
 
       await sql`
         INSERT INTO time_logs (id, work_day_date, type, timestamp, location_id)

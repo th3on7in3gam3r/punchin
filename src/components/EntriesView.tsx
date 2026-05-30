@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { format, parseISO, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
 import {
   FileText, MapPin, Play, Pause, Square, Clock, Calendar,
-  ChevronDown, ChevronUp, Edit2, Trash2, Plus, X, Search
+  ChevronDown, ChevronUp, Edit2, Trash2, Plus, X, Search, Download, RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { WorkDay, WorkLocation, TimeLog } from '../types';
@@ -12,13 +12,16 @@ import { cn } from '../lib/utils';
 import { ManualEntryModal } from './ManualEntryModal';
 import { recalculateDay } from '../lib/workDayStats';
 import { syncPunchToServer, deletePunchFromServer } from '../lib/punchApi';
+import { exportWeekCsv } from '../lib/exportWeekCsv';
+import { validateDayLogs } from '../lib/validateLogSequence';
 import { usePunchIn } from '../contexts/PunchInContext';
 
 const PAGE_SIZE = 10; // entries (days) shown per page
 
 export const EntriesView = () => {
-  const { workDays, setWorkDays, formatMinutes, workLocations } = usePunchIn();
+  const { workDays, setWorkDays, formatMinutes, workLocations, reloadFromCloud } = usePunchIn();
   const [searchQuery, setSearchQuery]           = useState('');
+  const [isRefreshing, setIsRefreshing]         = useState(false);
   const [selectedLocationId, setSelectedLocationId] = useState<string>('all');
   const [expandedDays, setExpandedDays]         = useState<string[]>([]);
   const [editingDayId, setEditingDayId]         = useState<string | null>(null);
@@ -38,12 +41,28 @@ export const EntriesView = () => {
       prev.map(day => {
         if (day.id !== dayId) return day;
         const logs = day.logs.map(l => (l.id === logId ? { ...l, ...updates } : l));
+        const check = validateDayLogs(logs);
+        if (!check.valid) {
+          window.alert(check.error);
+          return day;
+        }
         const updated = recalculateDay(day, logs);
         const log = updated.logs.find(l => l.id === logId);
         if (log) void syncPunchToServer(log, day.date);
         return updated;
       }),
     );
+  };
+
+  const handlePullRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await reloadFromCloud();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   const handleRemoveLog = (dayId: string, logId: string) => {
@@ -197,15 +216,34 @@ export const EntriesView = () => {
       )}
 
       {/* ── Summary bar ── */}
-      <div className="flex items-center justify-between px-1">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-1">
         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
           {filteredDays.length} {filteredDays.length === 1 ? 'day' : 'days'} found
         </p>
-        <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 rounded-full">
-          <Clock size={10} className="text-blue-400" />
-          <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">
-            This week: {formatMinutes(weeklyTotalMinutes)}
-          </span>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={handlePullRefresh}
+            disabled={isRefreshing}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-full border border-slate-200 text-[9px] font-black uppercase tracking-wider text-slate-500 hover:border-blue-300 disabled:opacity-50"
+          >
+            <RefreshCw size={10} className={isRefreshing ? 'animate-spin' : ''} />
+            Refresh
+          </button>
+          <button
+            type="button"
+            onClick={() => exportWeekCsv(workDays, workLocations, formatMinutes)}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-600 text-white text-[9px] font-black uppercase tracking-wider"
+          >
+            <Download size={10} />
+            Week CSV
+          </button>
+          <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 dark:bg-blue-900/30 rounded-full">
+            <Clock size={10} className="text-blue-400" />
+            <span className="text-[10px] font-black text-blue-600 dark:text-blue-300 uppercase tracking-widest">
+              This week: {formatMinutes(weeklyTotalMinutes)}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -383,9 +421,17 @@ export const EntriesView = () => {
                                         </button>
                                       </div>
                                     ) : (
-                                      <p className="text-xs font-black text-slate-800 tabular-nums shrink-0">
+                                      <button
+                                        type="button"
+                                        onClick={e => {
+                                          e.stopPropagation();
+                                          setEditingDayId(day.id);
+                                        }}
+                                        className="text-xs font-black text-slate-800 dark:text-slate-200 tabular-nums shrink-0 hover:text-blue-600 underline-offset-2 hover:underline"
+                                        title="Tap to edit time"
+                                      >
                                         {format(log.timestamp, 'hh:mm a')}
-                                      </p>
+                                      </button>
                                     )}
                                   </div>
                                 </div>

@@ -89,6 +89,7 @@ export function useHomeSession(selectedLocationId: string | undefined) {
     currentTime,
     currentStatus,
     today,
+    workDays,
     formatMinutes,
     breakDuration,
     setBreakDuration,

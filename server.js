@@ -4,6 +4,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { validateDayLogs } from './server/validateLogSequence.js';
 
 dotenv.config();
 
@@ -60,6 +61,18 @@ app.post('/api/punch', async (req, res) => {
     const timestamp  = body.timestamp || now.getTime();
     // Use the client-supplied id if present (edit/save flow), otherwise generate one
     const logId      = body.id || crypto.randomUUID();
+
+    const existing = await sql`
+      SELECT id, type, timestamp FROM time_logs WHERE work_day_date = ${dateStr}
+    `;
+    const merged = existing
+      .filter(row => row.id !== logId)
+      .map(row => ({ id: row.id, type: row.type, timestamp: row.timestamp }));
+    merged.push({ id: logId, type, timestamp });
+    const check = validateDayLogs(merged);
+    if (!check.valid) {
+      return res.status(400).json({ error: check.error });
+    }
 
     // UPSERT — insert new or update existing row by primary key
     await sql`

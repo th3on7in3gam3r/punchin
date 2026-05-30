@@ -1,5 +1,6 @@
 import type { TimeLog } from '../types';
-import { setSyncStatus } from './syncStatus';
+import { setSyncStatus, setCloudReachable } from './syncStatus';
+import { recordLastSync } from './lastSync';
 
 const QUEUE_KEY = 'punchin_sync_queue';
 
@@ -37,6 +38,10 @@ function updatePendingStatus() {
     return;
   }
   setSyncStatus(statusIsOffline() ? 'offline' : 'pending', q.length);
+}
+
+function onSyncSuccess() {
+  recordLastSync();
 }
 
 function statusIsOffline() {
@@ -100,6 +105,7 @@ export async function flushPunchSyncQueue(): Promise<void> {
     }
   }
 
+  onSyncSuccess();
   setSyncStatus('synced', 0);
   scheduleIdleFade();
 }
@@ -110,7 +116,9 @@ let fadeTimer: ReturnType<typeof setTimeout> | null = null;
 function scheduleIdleFade() {
   if (fadeTimer) clearTimeout(fadeTimer);
   fadeTimer = setTimeout(() => {
-    if (loadQueue().length === 0 && !statusIsOffline()) setSyncStatus('idle', 0);
+    if (loadQueue().length === 0 && !statusIsOffline()) {
+      setSyncStatus('cloud-connected', 0);
+    }
   }, 4000);
 }
 
@@ -130,15 +138,18 @@ export async function probeCloudConnection(): Promise<boolean> {
   try {
     const res = await fetch('/health', { signal: AbortSignal.timeout(5000) });
     if (!res.ok) {
-      setSyncStatus(statusIsOffline() ? 'offline' : 'idle', loadQueue().length);
+      setCloudReachable(false);
+      setSyncStatus('local-only', loadQueue().length);
       return false;
     }
+    setCloudReachable(true);
     const q = loadQueue();
     if (q.length > 0) setSyncStatus('pending', q.length);
-    else if (!statusIsOffline()) setSyncStatus('idle', 0);
+    else if (!statusIsOffline()) setSyncStatus('cloud-connected', 0);
     return true;
   } catch {
-    setSyncStatus(statusIsOffline() ? 'offline' : 'offline', loadQueue().length);
+    setCloudReachable(false);
+    setSyncStatus(statusIsOffline() ? 'offline' : 'local-only', loadQueue().length);
     return false;
   }
 }
@@ -164,6 +175,7 @@ export async function queuePunchSync(log: TimeLog, date: string): Promise<void> 
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     await flushPunchSyncQueue();
     if (loadQueue().length === 0) {
+      onSyncSuccess();
       setSyncStatus('synced', 0);
       scheduleIdleFade();
     }
@@ -186,10 +198,27 @@ export async function queuePunchDelete(logId: string): Promise<void> {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     await flushPunchSyncQueue();
     if (loadQueue().length === 0) {
+      onSyncSuccess();
       setSyncStatus('synced', 0);
       scheduleIdleFade();
     }
   } catch {
     enqueue(item);
   }
+}
+
+/** Reload work days from cloud (for pull-to-refresh). */
+export async function fetchLogsFromCloud(): Promise<
+  Array<{
+    id: string;
+    work_day_date: string;
+    type: TimeLog['type'];
+    timestamp: number | string;
+    location_id?: string | null;
+  }>
+> {
+  const res = await fetch('/api/punch');
+  if (!res.ok) throw new Error('Failed to load from cloud');
+  const { logs } = await res.json();
+  return logs ?? [];
 }

@@ -4,7 +4,17 @@ import { getSyncState, subscribeSyncStatus, type SyncStatus } from '../lib/syncS
 export function useSyncStatus() {
   const [state, setState] = useState(getSyncState);
 
-  useEffect(() => subscribeSyncStatus((status, pendingCount) => setState({ status, pendingCount })), []);
+  useEffect(
+    () =>
+      subscribeSyncStatus((status, pendingCount, cloudReachable) =>
+        setState({ status, pendingCount, cloudReachable }),
+      ),
+    [],
+  );
 
-  return state as { status: SyncStatus; pendingCount: number };
+  return state as {
+    status: SyncStatus;
+    pendingCount: number;
+    cloudReachable: boolean | null;
+  };
 }

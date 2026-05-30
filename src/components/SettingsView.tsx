@@ -8,6 +8,7 @@ import { cn } from '../lib/utils';
 import { SOUNDS } from '../constants';
 import { usePunchIn } from '../contexts/PunchInContext';
 import { themeStatusLabel } from '../lib/theme';
+import { getLastSyncAt, formatLastSyncLabel } from '../lib/lastSync';
 
 export const SettingsView = ({ setView }: { setView: (view: View) => void }) => {
   const {
@@ -189,6 +190,9 @@ export const SettingsView = ({ setView }: { setView: (view: View) => void }) => 
               />
             </button>
           </div>
+          <p className="text-[10px] text-slate-400 leading-relaxed pt-2 border-t border-slate-100 dark:border-slate-700">
+            {formatLastSyncLabel(getLastSyncAt())}. Sync is per device — not live multi-user yet.
+          </p>
         </Card>
 
         {/* Work Locations Section */}

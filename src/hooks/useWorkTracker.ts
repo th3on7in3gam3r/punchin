@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { format, isSameDay } from 'date-fns';
 import {
   WorkDay,
@@ -18,9 +18,11 @@ import {
   workDaysFromDbLogs,
   statusFromLastLog,
 } from '../lib/workDayStats';
-import { queuePunchSync, clearPunchSyncQueue } from '../lib/punchSyncQueue';
+import { queuePunchSync, clearPunchSyncQueue, fetchLogsFromCloud } from '../lib/punchSyncQueue';
 import { setSyncStatus } from '../lib/syncStatus';
 import { clearPunchinStorage } from '../lib/storageKeys';
+import { validateDayLogs } from '../lib/validateLogSequence';
+import { punchHaptic } from '../lib/haptics';
 import {
   usePersistedState,
   booleanSerializer,
@@ -63,6 +65,8 @@ export function useWorkTracker(options: UseWorkTrackerOptions = {}) {
 
   const [currentTime, setCurrentTime] = useState(new Date());
   const [currentStatus, setCurrentStatus] = useState<EntryStatus>('clocked_out');
+  const currentStatusRef = useRef<EntryStatus>('clocked_out');
+  currentStatusRef.current = currentStatus;
   const [activeNotification, setActiveNotification] = useState<Reminder | null>(null);
 
   const [workDays, setWorkDays] = usePersistedState<WorkDay[]>(
@@ -174,10 +178,32 @@ export function useWorkTracker(options: UseWorkTrackerOptions = {}) {
         });
         return changed ? next : prev;
       });
+
+      const todayStr = format(now, 'yyyy-MM-dd');
+      if (currentStatusRef.current === 'clocked_in') {
+        const nudgeKey = `punchin_eod_nudge_${todayStr}`;
+        if (!localStorage.getItem(nudgeKey)) {
+          const [eh, em] = defaultWorkEnd.split(':').map(Number);
+          const scheduledEnd = new Date(now);
+          scheduledEnd.setHours(eh, em, 0, 0);
+          if (now.getTime() > scheduledEnd.getTime() + 30 * 60 * 1000) {
+            localStorage.setItem(nudgeKey, '1');
+            setActiveNotification({
+              id: 'eod-nudge',
+              label: 'Still on the clock?',
+              type: 'fixed',
+              time: defaultWorkEnd,
+              days: [currentDay],
+              enabled: true,
+              sound: defaultReminderSound,
+            });
+          }
+        }
+      }
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [notificationsEnabled, setReminders]);
+  }, [notificationsEnabled, setReminders, defaultWorkEnd, defaultReminderSound]);
 
   useEffect(() => {
     async function loadHistory() {
@@ -247,6 +273,16 @@ export function useWorkTracker(options: UseWorkTrackerOptions = {}) {
       locationId,
     };
 
+    const todayDay = workDays.find(d => d.date === dateStr);
+    const trialLogs = [...(todayDay?.logs ?? []), newLog];
+    const check = validateDayLogs(trialLogs);
+    if (!check.valid) {
+      window.alert(check.error);
+      return;
+    }
+
+    punchHaptic(type);
+
     setWorkDays(prev => {
       const existingDayIndex = prev.findIndex(d => d.date === dateStr);
       const updatedDays = [...prev];
@@ -274,6 +310,13 @@ export function useWorkTracker(options: UseWorkTrackerOptions = {}) {
     setCurrentStatus(statusFromLastLog(type));
 
     void queuePunchSync(newLog, dateStr);
+  }, [setWorkDays, workDays]);
+
+  const reloadFromCloud = useCallback(async () => {
+    const logs = await fetchLogsFromCloud();
+    if (!logs.length) return;
+    setWorkDays(prev => mergeWorkDays(prev, workDaysFromDbLogs(logs)));
+    setSyncStatus('synced', 0);
   }, [setWorkDays]);
 
   const today = useMemo(() => {
@@ -347,5 +390,6 @@ export function useWorkTracker(options: UseWorkTrackerOptions = {}) {
     breakDestination,
     setBreakDestination,
     clearAllData,
+    reloadFromCloud,
   };
 }

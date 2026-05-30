@@ -17,6 +17,7 @@ import { InstallBanner } from './components/InstallBanner';
 import { BottomNavigation } from './components/BottomNavigation';
 import { NotificationBell } from './components/NotificationBell';
 import { SyncIndicator } from './components/SyncIndicator';
+import { SyncFailureBanner } from './components/SyncFailureBanner';
 
 function AppShell() {
   const [view, setView] = useState<View>('home');
@@ -92,6 +93,8 @@ function AppShell() {
         )}
       </header>
 
+      <SyncFailureBanner />
+
       <main className="max-w-md mx-auto px-6 py-6">
         <AnimatePresence mode="wait">
           <motion.div
@@ -134,9 +137,11 @@ function AppShell() {
                 <div>
                   <p className="font-bold">{activeNotification.label}</p>
                   <p className="text-xs opacity-80">
-                    {activeNotification.type === 'fixed'
-                      ? `It's ${activeNotification.time}!`
-                      : `Every ${activeNotification.intervalMinutes}m`}
+                    {activeNotification.id === 'eod-nudge'
+                      ? `Past your ${activeNotification.time} end — still clocked in?`
+                      : activeNotification.type === 'fixed'
+                        ? `It's ${activeNotification.time}!`
+                        : `Every ${activeNotification.intervalMinutes}m`}
                   </p>
                 </div>
               </div>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Flame } from 'lucide-react';
+import { Flame, Download } from 'lucide-react';
+import { exportWeekCsv } from '../lib/exportWeekCsv';
 import { motion } from 'motion/react';
 import { Card } from './common/Card';
 import { cn } from '../lib/utils';
@@ -34,12 +35,27 @@ export function HomeView({ selectedLocationId, setSelectedLocationId }: HomeView
             {session.welcomeMessage}
           </h2>
         </div>
-        {session.streak > 0 && (
-          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 dark:bg-orange-900/30 border border-orange-100 dark:border-orange-800 rounded-full">
-            <Flame size={14} className="text-orange-500" />
-            <span className="text-xs font-black text-orange-600 tabular-nums">{session.streak}d</span>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() =>
+              exportWeekCsv(session.workDays, session.workLocations, session.formatMinutes)
+            }
+            className="flex items-center gap-1 px-2 py-1 rounded-full bg-blue-600 text-white text-[9px] font-black uppercase tracking-wider"
+          >
+            <Download size={10} />
+            Week
+          </button>
+          {session.streak > 0 && (
+            <div
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 dark:bg-orange-900/30 border border-orange-100 dark:border-orange-800 rounded-full"
+              title="Counts consecutive days with logged work minutes"
+            >
+              <Flame size={14} className="text-orange-500" />
+              <span className="text-xs font-black text-orange-600 tabular-nums">{session.streak}d</span>
+            </div>
+          )}
+        </div>
       </motion.div>
 
       <Card className="relative p-6 border-none bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-xl shadow-blue-100/40 dark:shadow-none flex flex-col items-center gap-8 overflow-hidden border border-white/60 dark:border-slate-700">
